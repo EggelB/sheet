@@ -1,0 +1,22 @@
+{
+  "Condition": {
+    "mental_damage": {
+      "Light (2 boxes)": "", // Value from the corresponding cell in K2:V11, blank if static
+      "Moderate (3 boxes)": "", // Value from the corresponding cell, blank if static
+      "Serious (4 boxes)": "", // Value from the corresponding cell, blank if static
+      "Deadly": "" // Value from the corresponding cell, blank if static
+    },
+    "stun_damage": {
+      "Light (2 boxes)": "", // Value from the corresponding cell, blank if static
+      "Moderate (3 boxes)": "", // Value from the corresponding cell, blank if static
+      "Serious (4 boxes)": "", // Value from the corresponding cell, blank if static
+      "Deadly": "" // Value from the corresponding cell, blank if static
+    },
+    "physical_damage": {
+      "Light (2 boxes)": "", // Value from the corresponding cell, blank if static
+      "Moderate (3 boxes)": "", // Value from the corresponding cell, blank if static
+      "Serious (4 boxes)": "", // Value from the corresponding cell, blank if static
+      "Deadly": "" // Value from the corresponding cell, blank if static
+    }
+  }
+}

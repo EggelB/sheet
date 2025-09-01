@@ -1,0 +1,32 @@
+{
+  "Dice Pools": {
+    "Spell": { // Using "Spell" as the key
+      "name": "Spell", // Using the name of the dice pool
+      "formula": "(CHA+INT+WIL)/2", // Description of the formula
+      "base_rating": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "" // Formula representing the sum of Base Rating and Misc
+    },
+    "Combat": { // Using "Combat" as the key
+      "name": "Combat", // Using the name of the dice pool
+      "formula": "(DEX+INT+WIL)/2", // Description of the formula
+      "base_rating": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "" // Formula representing the sum of Base Rating and Misc
+    },
+    "Control": { // Using "Control" as the key
+      "name": "Control", // Using the name of the dice pool
+      "formula": "REACTION", // Description of the formula
+      "base_rating": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "" // Formula representing the sum of Base Rating and Misc
+    },
+    "Astral": { // Using "Astral" as the key
+      "name": "Astral", // Using the name of the dice pool
+      "formula": "(INT+WIL+MAG)/3", // Description of the formula
+      "base_rating": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "" // Formula representing the sum of Base Rating and Misc
+    }
+  }
+}

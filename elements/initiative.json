@@ -1,0 +1,8 @@
+{
+  "Initiative": {
+      "d6": "",
+      "reaction_mod": "", // Value from Attributes.Reaction.total
+      "misc_mod": "",
+      "total": "" // Formula representing the sum of d6, Reaction Mod, and Misc Mod
+    }
+}

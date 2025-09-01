@@ -1,0 +1,10 @@
+{
+  "Character Description": {
+    "name": "", // Value from the corresponding cell in B2:H7, blank if static, formula as string if formula
+    "race_station": "", // Value from the corresponding cell, blank if static, formula as string if formula
+    "sex": "", // Value from the corresponding cell, blank if static, formula as string if formula
+    "age": "", // Value from the corresponding cell, blank if static, formula as string if formula
+    "description": "", // Value from the corresponding cell, blank if static, formula as string if formula
+    "general_character_notes": "" // Value from the corresponding cell, blank if static, formula as string if formula
+  }
+}

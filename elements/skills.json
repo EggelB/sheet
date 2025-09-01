@@ -1,0 +1,28 @@
+{
+  "Skills": {
+    "entry_one": {
+      "name": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "sort_order": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "specialization": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "skill_type": "Active, Knowledge, or Language", // Description of the possible values
+      "attribute": "Linked to attribute objects", // Description of the link
+      "base_rating": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "cost": "=IF( O20 <> \"x\", IFERROR( LET( skillLevel, R20, linkedAttr, Q20, attrLevel, VLOOKUP(linkedAttr, B11:H19, 7, FALSE), overflow, MAX(skillLevel - attrLevel, 0), base, skillLevel - overflow, totalCost, base * 1 + overflow * 2, totalCost ), \"Attribute not found\" ), 1 )", // The formula as a string
+      "focus": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Base + Focus + Misc" // Description of what the formula represents
+    },
+    "entry_two": {
+      "name": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "sort_order": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "specialization": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "skill_type": "Active, Knowledge, or Language", // Description of the possible values
+      "attribute": "Linked to attribute objects", // Description of the link
+      "base_rating": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "cost": "=IF( O20 <> \"x\", IFERROR( LET( skillLevel, R20, linkedAttr, Q20, attrLevel, VLOOKUP(linkedAttr, B11:H19, 7, FALSE), overflow, MAX(skillLevel - attrLevel, 0), base, skillLevel - overflow, totalCost, base * 1 + overflow * 2, totalCost ), \"Attribute not found\" ), 1 )", // The formula as a string
+      "focus": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Base + Focus + Misc" // Description of what the formula represents
+    },
+    // ... and so on for each entry in the skills table
+  }

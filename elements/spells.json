@@ -1,0 +1,23 @@
+{
+  "Spells": {
+    "entry_one": {
+      "name": "",
+      "description": "",
+      "target_number": "",
+      "force": "",
+      "drain": "",
+      "drain_type": "",
+      "drain_cost": ""
+    },
+    "entry_two": {
+      "name": "",
+      "description": "",
+      "target_number": "",
+      "force": "",
+      "drain": "",
+      "drain_type": "",
+      "drain_cost": ""
+    },
+    // ... and so on for each entry in the spells table
+  }
+}

@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tabbed Sections with Fixed Header</title>
+  <style>
+    /* Styling for the boxed sections */
+    .box {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 20px;
+        display: none;
+    }
+
+    .box.active {
+        display: block;
+        overflow: hidden;
+    }
+
+    .box-attribute {
+        border: 1px solid #5f5f5f;
+        color: #000000;
+        padding: 10px;
+        margin-bottom: 20px;
+        max-width: 850px; /* Adjust the value as desired */
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 100%;
+        flex-grow: 1;
+    }
+
+    /* Styling for the dice pool box */
+    .box-dice-pool {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 20px;
+        max-width: 600px; /* Adjust the value as desired */
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 100%;
+    }
+
+    /* Styling for the condition monitor box */
+    .box-condition {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 20px;
+    }
+
+    /* Styling for the init box */
+    .box-init {
+        background-color: #000000;
+        color: #ffffff;
+        padding: 10px;
+        margin-bottom: 20px;
+        text-align: center;
+        max-width: 250px; /* Adjust the value as desired */
+    }
+
+    /* Additional styling for the radio buttons and headers */
+    h3, h4 {
+        margin: 0;
+        font-size: 15px;
+    }
+
+    /* Styling for the header box */
+    .header {
+        background-color: #f2f2f2;
+        font-weight: bold;
+        text-align: start;
+        padding: 20px;
+    }
+
+    input[type="radio"] {
+        margin-right: 2px;
+        text-align: justify;
+    }
+
+    .radio-row {
+        display: flex;
+        flex-wrap: wrap;
+        text-align: justify;
+        gap: 3px; /* Adjust the gap value as needed */
+    }
+
+    .radio-column {
+        flex: 1 1 auto;
+        text-align: justify;
+        padding: 3px;
+    }
+
+    /* Styling for the tab navigation */
+    .tab-navigation {
+      background-color: #ddd;
+      padding: 10px;
+    }
+
+    .tab-navigation button {
+      padding: 5px 10px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header">
+        <h1 style="text-align: center;">Character Sheet</h1>
+        <div class="row">
+          <div class="column condition-monitor">
+            <h2>Condition Monitor</h2>
+            <form>
+                <fieldset>
+                    <legend>Select degree of injury:</legend>
+                    <div class="grid-container">
+                    <!-- Generate radio buttons dynamically -->
+                    <!-- 3 rows -->
+                    <!-- 10 columns -->
+                    <!-- Use appropriate names and values for your use case -->
+                    <!-- Replace the PHP code with appropriate HTML -->
+                    <!-- Example HTML structure for a grid of radio buttons -->
+                    <label for="mental-damage">
+                        <h3>Mental Damage</h3>
+                        <div class="radio-row">
+                            <div class="radio-column">
+                                <h4>No Damage</h4>
+                                <input type="radio" id="no-damage" name="options1" value="no-damage">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Light</h4>
+                                <input type="radio" id="light-damage-1" name="options1" value="light-damage-1">
+                                <input type="radio" id="light-damage-2" name="options1" value="light-damage-2">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Moderate</h4>
+                                <input type="radio" id="moderate-damage-1" name="options1" value="moderate-damage-1">
+                                <input type="radio" id="moderate-damage-2" name="options1" value="moderate-damage-2">
+                                <input type="radio" id="moderate-damage-3" name="options1" value="moderate-damage-3">
+                            </div>
+                            <div class="radio-column">
+                            <h4>Serious</h4>
+                                <input type="radio" id="serious-damage-1" name="options1" value="serious-damage-1">
+                                <input type="radio" id="serious-damage-2" name="options1" value="serious-damage-2">
+                                <input type="radio" id="serious-damage-3" name="options1" value="serious-damage-3">
+                                <input type="radio" id="serious-damage-4" name="options1" value="serious-damage-4">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Deadly</h4>
+                                <input type="radio" id="deadly" name="options1" value="deadly">
+                            </div>
+                        </div>
+                    </label>                                            
+                    <label for="stun-damage">
+                        <h3>Stun Damage</h3>
+                        <div class="radio-row">
+                            <div class="radio-column">
+                                <h4>No Damage</h4>
+                                <input type="radio" id="no-damage" name="options2" value="no-damage">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Light</h4>
+                                <input type="radio" id="light-damage-1" name="options2" value="light-damage-1">
+                                <input type="radio" id="light-damage-2" name="options2" value="light-damage-2">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Moderate</h4>
+                                <input type="radio" id="moderate-damage-1" name="options2" value="moderate-damage-1">
+                                <input type="radio" id="moderate-damage-2" name="options2" value="moderate-damage-2">
+                                <input type="radio" id="moderate-damage-3" name="options2" value="moderate-damage-3">
+                            </div>
+                            <div class="radio-column">
+                            <h4>Serious</h4>
+                                <input type="radio" id="serious-damage-1" name="options2" value="serious-damage-1">
+                                <input type="radio" id="serious-damage-2" name="options2" value="serious-damage-2">
+                                <input type="radio" id="serious-damage-3" name="options2" value="serious-damage-3">
+                                <input type="radio" id="serious-damage-4" name="options2" value="serious-damage-4">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Deadly</h4>
+                                <input type="radio" id="deadly" name="options2" value="deadly">
+                            </div>
+                        </div>
+                    </label>
+                    <label for="physical-damage">
+                        <h3>Physical Damage</h3>
+                        <div class="radio-row">
+                            <div class="radio-column">
+                                <h4>No Damage</h4>
+                                <input type="radio" id="no-damage" name="options3" value="no-damage">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Light</h4>
+                                <input type="radio" id="light-damage-1" name="options3" value="light-damage-1">
+                                <input type="radio" id="light-damage-2" name="options3" value="light-damage-2">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Moderate</h4>
+                                <input type="radio" id="moderate-damage-1" name="options3" value="moderate-damage-1">
+                                <input type="radio" id="moderate-damage-2" name="options3" value="moderate-damage-2">
+                                <input type="radio" id="moderate-damage-3" name="options3" value="moderate-damage-3">
+                            </div>
+                            <div class="radio-column">
+                            <h4>Serious</h4>
+                                <input type="radio" id="serious-damage-1" name="options3" value="serious-damage-1">
+                                <input type="radio" id="serious-damage-2" name="options3" value="serious-damage-2">
+                                <input type="radio" id="serious-damage-3" name="options3" value="serious-damage-3">
+                                <input type="radio" id="serious-damage-4" name="options3" value="serious-damage-4">
+                            </div>
+                            <div class="radio-column">
+                                <h4>Deadly</h4>
+                                <input type="radio" id="deadly" name="options3" value="deadly">
+                            </div>
+                    </label>
+                    </div>
+                </fieldset>
+                </form>
+            </div>
+        </div>
+
+        <!-- Target Number/Initiative/Condition Modifier -->
+        <div class="row">
+            <div class="column">
+              <div class="box-condition">
+                <h4>TN:</h4>
+                    <input type="number" value="0">
+                <h4>INIT:</h4>
+                    <input type="number" value="0">
+              </div>
+            </div>
+        </div>
+    
+        <div class="column">
+            <h2>Player Information</h2>
+            <div class="row">
+            <div class="column">
+                <label for="player-name">Player Name:</label>
+                <input type="text" id="player-name" name="player-name" placeholder="Enter player's name">
+            </div>
+            <div class="column">
+                <label for="character-name">Character Name:</label>
+                <input type="text" id="character-name" name="character-name" placeholder="Enter character's name">
+                <label for="age">Age:</label>
+                <input type="number" id="age" name="age" min="0" placeholder="Enter character's age">
+                <label for="race">Race:</label>
+                <input type="text" id="race" name="race" placeholder="Enter character's race">
+                <label for="station">Station:</label>
+                <input type="text" id="station" name="station" placeholder="Enter character's station">
+                <label for="height">Height:</label>
+                <input type="text" id="height" name="height" placeholder="Enter character's height">
+                <label for="weight">Weight:</label>
+                <input type="text" id="weight" name="weight" placeholder="Enter character's weight">
+            </div>
+            </div>
+        </div>
+        </div>
+    </div>  
+
+  <!-- Tab Navigation -->
+  <div class="tab-navigation">
+    <button onclick="openTab(event, 0)">Attributes</button>
+    <button onclick="openTab(event, 1)">Equipment</button>
+    <button onclick="openTab(event, 2)">Contact List</button>
+  </div>
+
+  <!-- Attributes -->
+  <div class="box active">
+    <h2>Attributes</h2>
+    <div class="box-attribute">
+        <table>
+            <tr>
+            <th>Attribute</th>
+            <th>Value</th>
+            <th>Mutations</th>
+            <th>Magic</th>
+            <th>Misc</th>
+            <th>Total</th>
+            </tr>
+            <tr class="attribute-row">
+                <td>Body</td>
+                <td><input type="number" class="attribute-input" data-index="0" name="body" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="0" name="body-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="0" name="body-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="0" name="body-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="0"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Dexterity</td>
+                <td><input type="number" class="attribute-input" data-index="1" name="dexterity" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="1" name="dexterity-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="1" name="dexterity-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="1" name="dexterity-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="1"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Strength</td>
+                <td><input type="number" class="attribute-input" data-index="2" name="strength" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="2" name="strength-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="2" name="strength-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="2" name="strength-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="2"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Charisma</td>
+                <td><input type="number" class="attribute-input" data-index="3" name="charisma" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="3" name="charisma-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="3" name="charisma-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="3" name="charisma-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="3"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Intelligence</td>
+                <td><input type="number" class="attribute-input" data-index="4" name="intelligence" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="4" name="intelligence-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="4" name="intelligence-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="4" name="intelligence-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="4"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Willpower</td>
+                <td><input type="number" class="attribute-input" data-index="5" name="willpower" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="5" name="willpower-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="5" name="willpower-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="5" name="willpower-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="5"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Humanity</td>
+                <td><input type="number" class="attribute-input" data-index="6" name="humanity" min="0" max="100" step="0.01" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="6" name="humanity-mutations" min="0" max="100" step="0.01" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="6" name="humanity-magic" min="0" max="100" step="0.01" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="6" name="humanity-misc" min="0" max="100" step="0.01" value="0"></td>
+                <td class="total" data-index="6"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Reaction ((INT+DEX)/2)</td>
+                <td id="reaction-base-value" class="attribute-value" data-index="7"></td>
+                <td><input type="number" class="attribute-input" data-index="7" name="reaction-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="7" name="reaction-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="7" name="reaction-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="7"></td>
+            </tr>          
+            <tr class="attribute-row">
+                <td>Magic</td>
+                <td><input type="number" class="attribute-input" data-index="8" name="magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="8" name="magic-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="8" name="magic-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="8" name="magic-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="8"></td>
+            </tr>               
+        </table>
+    </div>
+    <div class="box-dice-pool">
+        <div class="box-init">
+            <h4>Initiative:</h4>
+            <button onclick="rollInitiative()">INIT</button>
+        </div>
+        <table>
+            <tr>
+                <th>Pool Name</th>
+                <th>Formula</th>
+                <th>Base Rating</th>
+                <th>Misc</th>
+                <th>Total</th>
+            </tr>
+            <tr>
+                <td>Combat</td>
+                <td>(CHA + INT + WIL)/2</td>
+                <td id="combat-base" class="attribute-value" data-index="9"></td>
+                <td><input type="number" id="combat-misc-input" class="attribute-input" data-index="9" name="combat-misc" min="0" max="10" value="0" onchange="handleCombatMiscInputChange(event)"></td>
+                <td id="combat-dice-pool-total" class="total" data-index="9"></td>
+            </tr>
+            <tr>
+                <td>Spell</td>
+                <td>(DEX + INT + WIL)/2</td>
+                <td id="spell-base" class="attribute-value" data-index="10"></td>
+                <td><input type="number" id="spell-misc-input" class="attribute-input" data-index="10" name="spell-misc" min="0" max="10" value="0" onchange="handleSpellMiscInputChange(event)"></td>
+                <td id="spell-dice-pool-total" class="total" data-index="10"></td>
+            </tr>
+            <tr>
+              <td>Control</td>
+              <td>REACTION</td>
+              <td id="control-base" class="attribute-value" data-index="11"></td>
+              <td><input type="number" id="control-misc-input" class="attribute-input" data-index="11" name="control-misc" min="0" max="10" value="0" onchange="handleControlMiscInputChange(event)"></td>
+              <td id="control-dice-pool-total" class="total" data-index="11"></td>
+            </tr>
+        </table> 
+    </div>
+  </div>
+
+  <!-- Equipment -->
+  <div class="box">
+    <h2>Equipment</h2>
+    <p>This is the content of Equipment. It represents the second tabbed section that can be displayed.</p>
+  </div>
+
+  <!-- Contact List -->
+  <div class="box">
+    <h2>Contact List</h2>
+    <p>This is the content of Contact List. It represents the third tabbed section that can be displayed.</p>
+  </div>
+  <script>
+    // Get all the box elements
+    const boxes = document.getElementsByClassName("box");
+  
+    // Function to open the selected tab
+    function openTab(evt, index) {
+      // Iterate through all the boxes
+      for (let i = 0; i < boxes.length; i++) {
+        if (i === index) {
+          // Add the "active" class to the selected box to show it
+          boxes[i].classList.add("active");
+        } else {
+          // Remove the "active" class from other boxes to hide them
+          boxes[i].classList.remove("active");
+        }
+      }
+    }
+  
+    // Get the radio buttons by name
+    const radioButtons = document.getElementsByName("options");
+  
+    // Function to retrieve the selected radio button value
+    function getSelectedOption() {
+      let selectedOption = null;
+      for (let i = 0; i < radioButtons.length; i++) {
+        if (radioButtons[i].checked) {
+          selectedOption = radioButtons[i].value;
+          break;
+        }
+      }
+      return selectedOption;
+    }
+  
+    // Usage example: Assign the selected value to a constant
+    const selectedDamageOption = getSelectedOption();
+    console.log(selectedDamageOption);
+  
+    // Get the radio buttons for each group
+    const group1RadioButtons = document.getElementsByName("options1");
+    const group2RadioButtons = document.getElementsByName("options2");
+    const group3RadioButtons = document.getElementsByName("options3");
+    const group4RadioButtons = document.getElementsByName("options4");
+  
+    // Function to retrieve the selected options for each group
+    function getSelectedOptions(groupRadioButtons) {
+      const selectedOptions = [];
+      for (let i = 0; i < groupRadioButtons.length; i++) {
+        if (groupRadioButtons[i].checked) {
+          selectedOptions.push(groupRadioButtons[i].value);
+        }
+      }
+      return selectedOptions;
+    }
+  
+    // Usage example: Assign the selected options for each group to constants
+    const selectedOptionsGroup1 = getSelectedOptions(group1RadioButtons);
+    const selectedOptionsGroup2 = getSelectedOptions(group2RadioButtons);
+    const selectedOptionsGroup3 = getSelectedOptions(group3RadioButtons);
+    const selectedOptionsGroup4 = getSelectedOptions(group4RadioButtons);
+  
+    console.log(selectedOptionsGroup1);
+    console.log(selectedOptionsGroup2);
+    console.log(selectedOptionsGroup3);
+    console.log(selectedOptionsGroup4);
+  
+    // Function to handle changes in radio button selections
+    function handleRadioButtonChange(event) {
+      const selectedOptions = getSelectedOptions(event.target.name);
+      console.log(selectedOptions);
+    }
+  
+    // Function to calculate the base Reaction attribute value
+    function calculateBaseReaction() {
+      const intelligenceValue = getAttributeValue(4); // Index 4 is the Intelligence attribute
+      const dexterityValue = getAttributeValue(1); // Index 1 is the Dexterity attribute
+
+      const baseReactionValue = Math.floor((intelligenceValue + dexterityValue) / 2);
+
+      return baseReactionValue;
+    }
+
+  
+    // Function to update the reaction base value
+    function updateReactionValue() {
+      const reactionBaseValueElement = document.getElementById("reaction-base-value");
+      if (reactionBaseValueElement) {
+        const reactionBaseValue = calculateBaseReaction();
+        reactionBaseValueElement.textContent = reactionBaseValue;
+      }
+    }
+
+    // Function to calculate the total Reaction attribute value
+    function calculateTotalReaction() {
+      const baseReactionValue = calculateBaseReaction();
+      const reactionMutationsValue = parseFloat(document.querySelector('input[name="reaction-mutations"]').value) || 0;
+      const reactionMagicValue = parseFloat(document.querySelector('input[name="reaction-magic"]').value) || 0;
+      const reactionMiscValue = parseFloat(document.querySelector('input[name="reaction-misc"]').value) || 0;
+
+      const totalReactionValue = baseReactionValue + reactionMutationsValue + reactionMagicValue + reactionMiscValue;
+
+      return totalReactionValue;
+    }
+
+    // Function to update the total Reaction value
+    function updateTotalReactionValue() {
+      const totalReactionValueElement = document.getElementById("reaction-base-value");
+      if (totalReactionValueElement) {
+        const totalReactionValue = calculateTotalReaction();
+        totalReactionValueElement.textContent = totalReactionValue;
+      }
+    }
+  
+    // Function to roll initiative
+    function rollInitiative() {
+      // Perform the logic for rolling initiative
+      // For example, generate a random number between 1 and 20
+      const initiativeRoll = Math.floor(Math.random() * 20) + 1;
+      console.log(`Initiative roll: ${initiativeRoll}`);
+    }
+  
+    // Add event listeners to the radio buttons
+    group1RadioButtons.forEach((radioButton) => {
+      radioButton.addEventListener("change", handleRadioButtonChange);
+    });
+  
+    group2RadioButtons.forEach((radioButton) => {
+      radioButton.addEventListener("change", handleRadioButtonChange);
+    });
+  
+    group3RadioButtons.forEach((radioButton) => {
+      radioButton.addEventListener("change", handleRadioButtonChange);
+    });
+  
+    group4RadioButtons.forEach((radioButton) => {
+      radioButton.addEventListener("change", handleRadioButtonChange);
+    });
+  
+    // Function to calculate the base rating
+    function calculateBaseRating() {
+      const charismaValue = getAttributeValue(3); // Index 3 corresponds to the attribute "Charisma"
+      const intelligenceValue = getAttributeValue(4); // Index 4 corresponds to the attribute "Intelligence"
+      const willpowerValue = getAttributeValue(5); // Index 5 corresponds to the attribute "Willpower"
+  
+      const baseRating = (charismaValue + intelligenceValue + willpowerValue) / 2;
+  
+      return Math.floor(baseRating);
+    }
+  
+    // Function to retrieve the attribute value by index
+    function getAttributeValue(index) {
+      const attributeElement = document.querySelector(
+        `.attribute-input[data-index="${index}"]`
+      );
+      if (attributeElement) {
+        return parseFloat(attributeElement.value);
+      }
+      return 0; // Default value if the attribute element is not found
+    }
+  
+    // Function to update the Combat Base Rating
+    function updateCombatBase() {
+      const combatBaseElement = document.getElementById("combat-base");
+      if (combatBaseElement) {
+        combatBaseElement.textContent = calculateBaseRating();
+        calculateCombatDicePoolTotal(); // Update the Combat Dice Pool total when Combat Base Rating changes
+      }
+    }
+  
+    // Function to update the Spell Pool Base Rating
+    function updateSpellPoolBase() {
+      const spellPoolBaseElement = document.getElementById("spell-base");
+      if (spellPoolBaseElement) {
+        spellPoolBaseElement.textContent = calculateSpellPoolBaseRating();
+        calculateSpellDicePoolTotal(); // Update the Spell Dice Pool total when Spell Pool Base Rating changes
+      }
+    }
+  
+    // Function to retrieve combat-misc-input element
+    function getCombatMiscInput() {
+      const combatMiscInput = document.getElementById("combat-misc-input");
+      if (combatMiscInput) {
+        return combatMiscInput;
+      }
+      return 0; // Default value if the combat-misc-input element is not found
+    }
+  
+    // Function to listen for changes in the combat-misc-input field
+    function handleCombatMiscInputChange(event) {
+      const combatMiscInput = event.target;
+      const combatMiscValue = parseFloat(combatMiscInput.value) || 0;
+      const combatMiscTotal = document.getElementById("combat-misc-total");
+      if (combatMiscTotal) {
+        combatMiscTotal.textContent = combatMiscValue;
+        calculateCombatDicePoolTotal(); // Update the Combat Dice Pool total when combat misc input changes
+      }
+    }
+  
+    // Function to calculate the Combat Dice Pool total and update the total cell
+    function calculateCombatDicePoolTotal() {
+      const combatDicePool = calculateCombatDicePool();
+      const combatDicePoolTotalCell = document.getElementById("combat-dice-pool-total");
+      if (combatDicePoolTotalCell) {
+        combatDicePoolTotalCell.textContent = Math.floor(combatDicePool); // Rounding down to the nearest whole number
+      }
+    }
+  
+    // Function to calculate the Combat Dice Pool
+    function calculateCombatDicePool() {
+      const combatBase = calculateBaseRating();
+      const combatMiscValue = parseFloat(getCombatMiscInput().value) || 0;
+      const combatDicePool = combatBase + combatMiscValue;
+      return combatDicePool;
+    }
+  
+    // Function to retrieve spell-pool-misc-input element
+    function getSpellPoolMiscInput() {
+      const spellPoolMiscInput = document.getElementById("spell-misc-input");
+      if (spellPoolMiscInput) {
+        return spellPoolMiscInput;
+      }
+      return 0; // Default value if the spell-pool-misc-input element is not found
+    }
+  
+    // Function to listen for changes in the spell-pool-misc-input field
+    function handleSpellMiscInputChange(event) {
+      const spellPoolMiscInput = event.target;
+      const spellPoolMiscValue = parseFloat(spellPoolMiscInput.value) || 0;
+      const spellPoolMiscTotal = document.getElementById("spell-misc-total");
+      if (spellPoolMiscTotal) {
+        spellPoolMiscTotal.textContent = spellPoolMiscValue;
+        calculateSpellDicePoolTotal(); // Update the Spell Dice Pool total when spell pool misc input changes
+      }
+    }
+  
+    // Function to calculate the Spell Pool Base Rating
+    function calculateSpellPoolBaseRating() {
+      const dexterityValue = getAttributeValue(1); // Index 1 corresponds to the attribute "Dexterity"
+      const intelligenceValue = getAttributeValue(4); // Index 4 corresponds to the attribute "Intelligence"
+      const willpowerValue = getAttributeValue(5); // Index 5 corresponds to the attribute "Willpower"
+  
+      const spellPoolBaseRating = (dexterityValue + intelligenceValue + willpowerValue) / 2;
+  
+      return Math.floor(spellPoolBaseRating);
+    }
+  
+    // Function to calculate the Spell Pool total and update the total cell
+    function calculateSpellPoolTotal() {
+      const spellPool = calculateSpellPool();
+      const spellPoolTotalCell = document.getElementById("spell-dice-pool-total");
+      if (spellPoolTotalCell) {
+        spellPoolTotalCell.textContent = Math.floor(spellPool); // Rounding down to the nearest whole number
+      }
+    }
+  
+    // Function to calculate the Spell Pool
+    function calculateSpellPool() {
+      const spellPoolBase = calculateSpellPoolBaseRating();
+      const spellPoolMiscValue = parseFloat(getSpellPoolMiscInput().value) || 0;
+      const spellPool = spellPoolBase + spellPoolMiscValue;
+      return spellPool;
+    }
+  
+    // Function to calculate the Spell Dice Pool total and update the total cell
+    function calculateSpellDicePoolTotal() {
+      const spellDicePool = calculateSpellDicePool();
+      const spellDicePoolTotalCell = document.getElementById("spell-dice-pool-total");
+      if (spellDicePoolTotalCell) {
+        spellDicePoolTotalCell.textContent = Math.floor(spellDicePool); // Rounding down to the nearest whole number
+      }
+    }
+  
+    // Function to calculate the Spell Dice Pool
+    function calculateSpellDicePool() {
+      const spellPool = calculateSpellPool();
+      const spellDicePool = spellPool;
+      return spellDicePool;
+    }
+  
+    // Function to calculate the row totals for each attribute
+    function calculateRowTotals() {
+      const attributeRows = document.querySelectorAll(".attribute-row");
+
+      attributeRows.forEach((row) => {
+        const cells = row.querySelectorAll(".attribute-input");
+        const totalCell = row.querySelector(".total");
+
+        let rowTotal = 0;
+
+        cells.forEach((cell) => {
+          const cellValue = parseFloat(cell.value) || 0;
+          rowTotal += cellValue;
+        });
+
+        // Check if the row corresponds to the Reaction attribute (data-index="7")
+        if (row.dataset.index === "7") {
+          const reactionBaseValue = parseFloat(document.getElementById("reaction-base-value").textContent) || 0;
+          rowTotal += reactionBaseValue;
+        }
+
+        totalCell.textContent = rowTotal;
+      });
+
+      updateCombatBase(); // Update the Combat Base Rating
+      updateSpellPoolBase(); // Update the Spell Pool Base Rating
+      updateTotalReactionValue(); // Update the reaction value
+    }
+  
+    // Call the calculateRowTotals function to calculate the initial row totals
+    calculateRowTotals();
+  
+    // Update the row totals, Combat Base Rating, and Combat Dice Pool total when attribute input fields change
+    const attributeInputs = document.querySelectorAll(".attribute-input");
+    Array.from(attributeInputs).forEach((input) => {
+      input.addEventListener("input", calculateRowTotals);
+    });
+  
+    // Add event listener for combat misc input change
+    const combatMiscInput = document.getElementById("combat-misc-input");
+    if (combatMiscInput) {
+      combatMiscInput.addEventListener("input", handleCombatMiscInputChange);
+    }
+  
+    // Add event listener for spell misc input change
+    const spellMiscInput = document.getElementById("spell-misc-input");
+    if (spellMiscInput) {
+      spellMiscInput.addEventListener("input", handleSpellMiscInputChange);
+    }
+  
+    // Add event listeners for "reaction-base-value" "reaction-mutations", "reaction-magic", and "reaction-misc" input changes
+    const reactionBaseValueInput = document.querySelector('id=[name="reaction-base-value"]');
+    if (reactionBaseValueInput) {
+      reactionBaseValueInput.addEventListener("input", calculateBaseReaction);
+    }
+
+    const reactionMutationsInput = document.querySelector('input[name="reaction-mutations"]');
+    if (reactionMutationsInput) {
+      reactionMutationsInput.addEventListener("input", calculateRowTotals);
+    }
+  
+    const reactionMagicInput = document.querySelector('input[name="reaction-magic"]');
+    if (reactionMagicInput) {
+      reactionMagicInput.addEventListener("input", calculateRowTotals);
+    }
+  
+    const reactionMiscInput = document.querySelector('input[name="reaction-misc"]');
+    if (reactionMiscInput) {
+      reactionMiscInput.addEventListener("input", calculateRowTotals);
+    }
+  </script>  
+</body>
+</html>

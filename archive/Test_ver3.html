@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tabbed Sections with Fixed Header</title>
+  <style>
+    /* Styling for the boxed sections */
+    .box {
+        display: flex;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .box.active {
+        overflow: hidden;
+        display: block;
+    }
+
+    /* Styling for the skills box - should appear right beside the attributes box */
+    .box-skills {
+        border: 1px solid #5f5f5f;
+        padding: 10px;
+        margin-bottom: 20px;
+        max-width: 425px; /* Adjust the value as desired */
+    }
+
+    .box-attribute {
+        border: 1px solid #5f5f5f;
+        color: #000000;
+        padding: 10px;
+        margin-bottom: 20px;
+        max-width: 850px; /* Adjust the value as desired */
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 100%;
+        flex-grow: 1;
+    }
+
+    /* Styling for the dice pool box */
+    .box-dice-pool {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 20px;
+        max-width: 600px; /* Adjust the value as desired */
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 100%;
+    }
+
+    /* Styling for the condition monitor box */
+    .box-condition {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 20px;
+    }
+
+    /* Styling for the init box */
+    .box-init {
+        background-color: #000000;
+        color: #ffffff;
+        padding: 10px;
+        margin-bottom: 20px;
+        text-align: center;
+        max-width: 250px; /* Adjust the value as desired */
+    }
+
+
+    /* Styling for the damage checkboxes - sets color to red when selected */
+    .damage-checkbox:checked {
+        /* Hide the default checkbox appearance */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        /* Create a custom checkbox using ::before pseudo-element */
+        position: relative;
+        width: 16px;
+        height: 16px;
+        border: 1px solid #555;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    /* Styling for the checked state of the damage checkboxes - selection should set color to red, and the box now has a unicode cross mark */
+    .damage-checkbox:checked::before {
+        content: "\2718";
+        display: block;
+        position: absolute;
+        top: -1px;
+        left: 2px;
+        font-size: 12px;
+        line-height: 1;
+        width: 16px;
+        height: 16px;
+        text-align: center;
+        color: #b81a1a;
+    }
+
+    /* Optional styling to show a gray border when the checkbox is focused */
+    .damage-checkbox:focus {
+        outline: 0;
+        border: 2px solid #888;
+    }
+
+    /* Additional styling for the checkboxes and headers */
+    h3, h4 {
+        margin: 0;
+        font-size: 15px;
+    }
+
+    /* Styling for the header box */
+    .header {
+        background-color: #f2f2f2;
+        font-weight: bold;
+        text-align: start;
+        padding: 20px;
+    }
+
+    /* Additional styling for the checkboxes */
+    input[type="checkbox"] {
+        margin-right: 2px;
+        text-align: justify;
+    }
+
+    /* Add custom CSS styles to format the condition container */
+    .checkbox {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        text-align: justify;
+        gap: 3px; /* Adjust the gap value as needed */
+    }
+
+    /* Styling for the checkbox row */
+    .checkbox-row {
+        display: flex;
+        flex-wrap: wrap;
+        text-align: justify;
+        gap: 3px; /* Adjust the gap value as needed */
+    }
+
+    /* Styling for the checkbox column */
+    .checkbox-column {
+      flex: 0 0 calc(12% - 10px); /* Adjust the percentage according to your preference */
+      margin-bottom: 10px;
+    }
+
+    /* Styling for the tab navigation */
+    .tab-navigation {
+      background-color: #ddd;
+      padding: 10px;
+    }
+
+    .tab-navigation button {
+      padding: 5px 10px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header">
+        <h1 style="text-align: center;">Character Sheet</h1>
+        <div class="row">
+        <!-- Condition Monitor -->
+          <div class="column condition-monitor">
+            <h2>Condition Monitor</h2>
+            <form>
+                <fieldset>
+                    <legend>Select degree of injury:</legend>
+                    <!-- Creates the row of checkboxes for Mental damage -->
+                    <div class="grid-container">
+                    <label for="mental-damage">
+                        <h3>Mental Damage</h3>
+                        <div class="checkbox">
+                            <div class="checkbox-column">
+                                <h4>No Damage</h4>
+                                <input type="checkbox"
+                                 class="damage-checkbox" 
+                                 id="mental-no-damage" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-no-damage" 
+                                 tn-modifier="0"
+                                 data-value="0" 
+                                 checked>
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Light</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-light-damage-1" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-light-damage-1" 
+                                 tn-modifier="1"
+                                 data-value="1">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-light-damage-2" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-light-damage-2" 
+                                 tn-modifier="1"
+                                 data-value="2">
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Moderate</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-moderate-damage-1" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-moderate-damage-1" 
+                                 tn-modifier="2"
+                                 data-value="3">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-moderate-damage-2" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-moderate-damage-2" 
+                                 tn-modifier="2"
+                                 data-value="4">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-moderate-damage-3" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-moderate-damage-3" 
+                                 tn-modifier="2"
+                                 data-value="5">
+                            </div>
+                            <div class="checkbox-column">
+                            <h4>Serious</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-serious-damage-1" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-serious-damage-1" 
+                                 tn-modifier="3"
+                                 data-value="6">
+
+                                <input type="checkbox"  
+                                 class="damage-checkbox" 
+                                 id="mental-serious-damage-2" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-serious-damage-2" 
+                                 tn-modifier="3"
+                                 data-value="7">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-serious-damage-3" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-serious-damage-3" 
+                                 tn-modifier="3"
+                                 data-value="8">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-serious-damage-4" 
+                                 data-damage-type="mental" 
+                                 name="mental-options" 
+                                 value="mental-serious-damage-4" 
+                                 tn-modifier="3"
+                                 data-value="9">
+
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Deadly</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="mental-deadly" 
+                                 data-damage-type="mental" 
+                                 name="mental-options"
+                                 value="mental-deadly" 
+                                 tn-modifier="4"
+                                 data-value="10">
+                            </div>
+                        </div>
+                    </label>                                            
+                    <label for="stun-damage">
+                        <!-- Creates the row of checkboxes for stun damage -->
+                        <h3>Stun Damage</h3>
+                        <div class="checkbox">
+                            <div class="checkbox-column">
+                                <h4>No Damage</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-no-damage" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-no-damage" 
+                                 tn-modifier="0"
+                                 data-value="0" 
+                                 checked>
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Light</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-light-damage-1" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-light-damage-1" 
+                                 tn-modifier="1"
+                                 data-value="1">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-light-damage-2" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-light-damage-2" 
+                                 tn-modifier="1"
+                                 data-value="2">
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Moderate</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-moderate-damage-1" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-moderate-damage-1" 
+                                 tn-modifier="2"
+                                 data-value="3">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-moderate-damage-2" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-moderate-damage-2"  
+                                 tn-modifier="2"
+                                 data-value="4">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-moderate-damage-3" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-moderate-damage-3"  
+                                 tn-modifier="2"
+                                 data-value="5">
+                            </div>
+                            <div class="checkbox-column">
+                            <h4>Serious</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-serious-damage-1" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-serious-damage-1" 
+                                 tn-modifier="3"
+                                 data-value="6">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-serious-damage-2" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-serious-damage-2" 
+                                 tn-modifier="3"
+                                 data-value="7">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-serious-damage-3" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-serious-damage-3" 
+                                 tn-modifier="3"
+                                 data-value="8">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-serious-damage-4" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-serious-damage-4" 
+                                 tn-modifier="3"
+                                 data-value="9">
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Deadly</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="stun-deadly" 
+                                 data-damage-type="stun" 
+                                 name="stun-options" 
+                                 value="stun-deadly" 
+                                 tn-modifier="4"
+                                 data-value="10">
+                            </div>
+                        </div>
+                    </label>
+                    <label for="physical-damage">
+                        <!-- Creates the row of checkboxes for phyisical damage -->
+                        <h3>Physical Damage</h3>
+                        <div class="checkbox">
+                            <div class="checkbox-column">
+                                <h4>No Damage</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="physical-no-damage" 
+                                 data-damage-type="physical" 
+                                 name="physical-options" 
+                                 value="physical-no-damage" 
+                                 tn-modifier="0"
+                                 data-value="0" 
+                                 checked>
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Light</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="physical-light-damage-1" 
+                                 data-damage-type="physical"
+                                 name="physical-options"
+                                 value="physical-light-damage-1" 
+                                 tn-modifier="1"
+                                 data-value="1">
+
+                                <input type="checkbox"
+                                 class="damage-checkbox" 
+                                 id="physical-light-damage-2" 
+                                 data-damage-type="physical"
+                                 name="physical-options"
+                                 value="physical-light-damage-2"
+                                 tn-modifier="1"
+                                 data-value="2">
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Moderate</h4>
+                                <input type="checkbox"
+                                 class="damage-checkbox" 
+                                 id="physical-moderate-damage-1"
+                                 data-damage-type="physical"
+                                 name="physical-options"
+                                 value="physical-moderate-damage-1"
+                                 tn-modifier="2"
+                                 data-value="3">
+
+                                <input type="checkbox"
+                                 class="damage-checkbox" 
+                                 id="physical-moderate-damage-2" 
+                                 data-damage-type="physical"
+                                 name="physical-options"
+                                 value="physical-moderate-damage-2"
+                                 tn-modifier="2"
+                                 data-value="4">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="physical-moderate-damage-3"
+                                 data-damage-type="physical" 
+                                 name="physical-options" 
+                                 value="physical-moderate-damage-3"
+                                 tn-modifier="2"
+                                 data-value="5">
+                            </div>
+                            <div class="checkbox-column">
+                            <h4>Serious</h4>
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="physical-serious-damage-1" 
+                                 data-damage-type="physical" 
+                                 name="physical-options" 
+                                 value="physical-serious-damage-1"
+                                 tn-modifier="3"
+                                 data-value="6">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="physical-serious-damage-2"
+                                 data-damage-type="physical" 
+                                 name="physical-options" 
+                                 value="physical-serious-damage-2" 
+                                 tn-modifier="3"
+                                 data-value="7">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="physical-serious-damage-3"
+                                 data-damage-type="physical"
+                                 name="physical-options"
+                                 value="physical-serious-damage-3"
+                                 tn-modifier="3"
+                                 data-value="8">
+
+                                <input type="checkbox" 
+                                 class="damage-checkbox" 
+                                 id="physical-serious-damage-4" 
+                                 data-damage-type="physical"
+                                 name="physical-options" 
+                                 value="physical-serious-damage-4" 
+                                 tn-modifier="3"
+                                 data-value="9">
+                            </div>
+                            <div class="checkbox-column">
+                                <h4>Deadly</h4>
+                                <input type="checkbox"
+                                 class="damage-checkbox" 
+                                 id="physical-deadly"
+                                 data-damage-type="physical" 
+                                 name="physical-options" 
+                                 value="physical-deadly" 
+                                 tn-modifier="4"
+                                 data-value="10">
+                            </div>
+                    </label>
+                    </div>
+                </fieldset>
+                </form>
+            </div>
+        </div>
+
+        <!-- Target Number/Initiative/Condition Modifier -->
+        <div class="row">
+            <div class="column">
+              <div class="box-condition">
+                <h4>TN:</h4>
+                    <input type="number" id="tn-input" value="0">
+                    <!-- the Total TN: will be updated based on Condition Monitor selections -->
+                    <span id="total-tn"> Total TN: 0</span>
+                <h4>INIT:</h4>
+                    <input type="number" id="init-input" value="0">
+                    <!-- the Total Init: will be updated based on Condition Monitor selections -->
+                    <span id="total-init"> Total INIT: 0</span>
+              </div>
+            </div>
+        </div>
+        
+        <!-- Player Information -->
+        <div class="column">
+            <h2>Player Information</h2>
+            <div class="row">
+            <div class="column">
+                <label for="player-name">Player Name:</label>
+                <input type="text" id="player-name" name="player-name" placeholder="Enter player's name">
+            </div>
+            <div class="column">
+                <label for="character-name">Character Name:</label>
+                <input type="text" id="character-name" name="character-name" placeholder="Enter character's name">
+                <label for="age">Age:</label>
+                <input type="number" id="age" name="age" min="0" placeholder="Enter character's age">
+                <label for="race">Race:</label>
+                <input type="text" id="race" name="race" placeholder="Enter character's race">
+                <label for="station">Station:</label>
+                <input type="text" id="station" name="station" placeholder="Enter character's station">
+                <label for="height">Height:</label>
+                <input type="text" id="height" name="height" placeholder="Enter character's height">
+                <label for="weight">Weight:</label>
+                <input type="text" id="weight" name="weight" placeholder="Enter character's weight">
+            </div>
+            </div>
+        </div>
+        </div>
+    </div>  
+
+  <!-- Tab Navigation -->
+  <div class="tab-navigation">
+    <button onclick="openTab(event, 0)">Attributes</button>
+    <button onclick="openTab(event, 1)">Equipment</button>
+    <button onclick="openTab(event, 2)">Contact List</button>
+  </div>
+
+  <!-- Attributes -->
+  <div class="box active">
+    <h2>Attributes</h2>
+    <div class="box-attribute">
+        <!-- Creates the table for attributes -->
+        <table>
+            <tr>
+            <th>Attribute</th>
+            <th>Value</th>
+            <th>Mutations</th>
+            <th>Magic</th>
+            <th>Misc</th>
+            <th>Total</th>
+            </tr>
+            <tr class="attribute-row">
+                <td>Body</td>
+                <td><input type="number" class="attribute-input" data-index="0" name="body" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="0" name="body-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="0" name="body-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="0" name="body-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="0"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Dexterity</td>
+                <td><input type="number" class="attribute-input" data-index="1" name="dexterity" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="1" name="dexterity-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="1" name="dexterity-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="1" name="dexterity-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="1"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Strength</td>
+                <td><input type="number" class="attribute-input" data-index="2" name="strength" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="2" name="strength-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="2" name="strength-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="2" name="strength-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="2"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Charisma</td>
+                <td><input type="number" class="attribute-input" data-index="3" name="charisma" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="3" name="charisma-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="3" name="charisma-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="3" name="charisma-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="3"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Intelligence</td>
+                <td><input type="number" class="attribute-input" data-index="4" name="intelligence" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="4" name="intelligence-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="4" name="intelligence-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="4" name="intelligence-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="4"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Willpower</td>
+                <td><input type="number" class="attribute-input" data-index="5" name="willpower" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="5" name="willpower-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="5" name="willpower-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="5" name="willpower-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="5"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Humanity</td>
+                <td><input type="number" class="attribute-input" data-index="6" name="humanity" min="0" max="100" step="0.01" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="6" name="humanity-mutations" min="0" max="100" step="0.01" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="6" name="humanity-magic" min="0" max="100" step="0.01" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="6" name="humanity-misc" min="0" max="100" step="0.01" value="0"></td>
+                <td class="total" data-index="6"></td>
+            </tr>
+            <tr class="attribute-row">
+                <td>Reaction ((INT+DEX)/2)</td>
+                <td id="reaction-base-value" class="attribute-value" data-index="7">0</td>
+                <td><input type="number" class="attribute-input" data-index="7" name="reaction-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="7" name="reaction-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="7" name="reaction-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="7"></td>
+            </tr>                                  
+            <tr class="attribute-row">
+                <td>Magic</td>
+                <td><input type="number" class="attribute-input" data-index="8" name="magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="8" name="magic-mutations" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="8" name="magic-magic" min="0" max="10" value="0"></td>
+                <td><input type="number" class="attribute-input" data-index="8" name="magic-misc" min="0" max="10" value="0"></td>
+                <td class="total" data-index="8"></td>
+            </tr>               
+        </table>
+    </div>
+    <!-- Creates the table for skills -->
+    <!-- Skills are manual text inputs, and have a corresponding int input for the skill level -->
+    <!-- Skills can also be added via a button below the table of current skills -->
+    <h2>Skills</h2>
+    <div class="box-skills">
+        <table>
+            <tr>
+                <th>Skill Name</th>
+                <th>Skill Level</th>
+                <th>Total</th>
+            </tr>
+            <tr>
+                <td><input type="text" id="skill-1-name" name="skill-1-name" placeholder="Enter skill name"></td>
+                <td><input type="number" id="skill-1-level" name="skill-1-level" min="0" max="1000" value="0"></td>
+                <td id="skill-1-total" class="total"></td>
+            </tr>
+            <!-- Button to add additional skill to the table -->
+            <tr>
+                <td colspan="3"><button onclick="addSkill()">Add Skill</button></td>
+        </table>
+    </div>
+    <div class="box-dice-pool">
+        <div class="box-init">
+            <h4>Initiative:</h4>
+            <button onclick="rollInitiative()">INIT</button>
+        </div>
+        <!-- Creates the table for the various dice pools -->
+        <table>
+            <tr>
+                <th>Pool Name</th>
+                <th>Formula</th>
+                <th>Base Rating</th>
+                <th>Misc</th>
+                <th>Total</th>
+            </tr>
+            <tr>
+                <td>Combat</td>
+                <td>(CHA + INT + WIL)/2</td>
+                <td id="combat-base" class="attribute-value" data-index="9"></td>
+                <td>
+                    <input 
+                        type="number" 
+                        id="combat-misc-input" 
+                        class="attribute-input" 
+                        data-index="9" 
+                        name="combat-misc" 
+                        min="0" 
+                        max="10"
+                        value="0" 
+                        onchange="handleCombatMiscInputChange(event)">
+                </td>
+                <td id="combat-dice-pool-total" class="total" data-index="9"></td>
+            </tr>
+            <tr>
+                <td>Spell</td>
+                <td>(DEX + INT + WIL)/2</td>
+                <td id="spell-base" class="attribute-value" data-index="10"></td>
+                <td>
+                    <input 
+                        type="number" 
+                        id="spell-misc-input" 
+                        class="attribute-input" 
+                        data-index="10" 
+                        name="spell-misc" 
+                        min="0" 
+                        max="10" 
+                        value="0" 
+                        onchange="handleSpellMiscInputChange(event)">
+                    </td>
+                <td id="spell-dice-pool-total" class="total" data-index="10"></td>
+            </tr>
+            <tr>
+                <td>Control</td>
+                <td>REACTION</td>
+                <td id="control-base" class="attribute-value" data-index="11"></td>
+                <td>
+                  <input
+                    type="number"
+                    id="control-misc-input"
+                    class="attribute-input"
+                    data-index="11"
+                    name="control-misc"
+                    min="0"
+                    max="10"
+                    value="0"
+                    onchange="handleControlMiscInputChange(event)">
+                </td>
+                <td id="control-dice-pool-total" class="total" data-index="11"></td>
+            </tr>   
+            <tr>
+                <td>Astral</td>
+                <td>(INT + WIL + MAG)/3</td>
+                <td id="astral-base" class="attribute-value" data-index="12"></td>
+                <td>
+                  <input
+                    type="number"
+                    id="astral-misc-input"
+                    class="attribute-input"
+                    data-index="12"
+                    name="astral-misc"
+                    min="0"
+                    max="10"
+                    value="0"
+                    onchange="handleAstralMiscInputChange(event)">
+                </td>
+                <td id="astral-dice-pool-total" class="total" data-index="12"></td>
+            </tr>                         
+        </table> 
+    </div>
+  </div>
+
+  <!-- Equipment -->
+  <div class="box">
+    <h2>Equipment</h2>
+    <p>This is the content of Equipment. It represents the second tabbed section that can be displayed.</p>
+  </div>
+
+  <!-- Contact List -->
+  <div class="box">
+    <h2>Contact List</h2>
+    <p>This is the content of Contact List. It represents the third tabbed section that can be displayed.</p>
+  </div>
+  <script>
+    // Get all the box elements
+    const boxes = document.getElementsByClassName("box");
+
+    // Function to open the selected tab
+    function openTab(evt, index) {
+        // Iterate through all the boxes
+        for (let i = 0; i < boxes.length; i++) {
+            if (i === index) {
+            // Add the "active" class to the selected box to show it
+            boxes[i].classList.add("active");
+            } else {
+            // Remove the "active" class from other boxes to hide them
+            boxes[i].classList.remove("active");
+            }
+        }
+    }
+
+    // Function to retrieve the selected checkbox values for each group
+    function getSelectedOptions(groupCheckboxes) {
+        const selectedOptions = [];
+        for (let i = 0; i < groupCheckboxes.length; i++) {
+            if (groupCheckboxes[i].checked) {
+            selectedOptions.push(groupCheckboxes[i].value);
+            }
+        }
+        return selectedOptions;
+    }
+
+    // Define and assign the checkbox elements for each group
+    const group1Checkboxes = document.querySelectorAll('input[name="group1"]');
+    const group2Checkboxes = document.querySelectorAll('input[name="group2"]');
+    const group3Checkboxes = document.querySelectorAll('input[name="group3"]');
+    const group4Checkboxes = document.querySelectorAll('input[name="group4"]');
+
+    // Define checkboxes variable
+    const checkboxes = document.querySelectorAll('.damage-checkbox');
+
+    // Usage example: Assign the selected options for each group to constants
+    const selectedOptionsGroup1 = getSelectedOptions(group1Checkboxes);
+    const selectedOptionsGroup2 = getSelectedOptions(group2Checkboxes);
+    const selectedOptionsGroup3 = getSelectedOptions(group3Checkboxes);
+    const selectedOptionsGroup4 = getSelectedOptions(group4Checkboxes);
+
+    // Variables to keep track of the current checkbox selected per damage type
+    let mentalDamageCheckboxSelected = null;
+    let stunDamageCheckboxSelected = null;
+    let physicalDamageCheckboxSelected = null;  
+
+    // Function to handle the checkbox selection in the Condition Monitor
+    function handleCheckboxSelection(checkbox) {
+        // Get the damage type (e.g. "mental", "stun", "physical") from the parent div's data-damage-type attribute
+        const damageType = checkbox.dataset.damageType || checkbox.closest('.checkbox').dataset.damageType;
+        console.log(`Selected damage type: ${damageType}`);
+
+        // All of the checkboxes have a numeric data-value attribute assigned to them. This is used to determine which boxes should be checked/unchecked
+        // based on the selected checkbox. For example, if the selected checkbox has a data-value of 3, then all the checkboxes with a data-value of 3 or less
+        // should be checked, and all the checkboxes with a data-value greater than 3 should be unchecked.
+        // Get the data-value of the selected checkbox
+        const selectedValue = parseInt(checkbox.getAttribute('data-value'));
+
+        // After any new checkbox selection, we need to determine which checkboxes should be checked/unchecked. To do this
+        // we will need to loop through all of the checkboxes of the selected damage type and compare their data-value to the selected checkbox's data-value.
+        // If the checkbox's data-value is less than or equal to the selected checkbox's data-value, then the checkbox should be checked. Otherwise, it should be unchecked.
+
+        // Add a console.log statement here to log the selected checkbox's data-value
+        console.log(`Selected checkbox value: ${selectedValue}`);
+
+        // Loop through all the checkboxes of the same damage type
+        for (let i = 0; i < checkboxes.length; i++) {
+            // Get the damage type of the current checkbox
+            const otherDamageType = checkboxes[i].dataset.damageType || checkboxes[i].closest('.checkbox').dataset.damageType;
+            const otherCheckboxValue = parseInt(checkboxes[i].getAttribute('data-value'));
+            console.log(`Other damage type: ${otherDamageType}, Other checkbox value: ${otherCheckboxValue}`);
+
+            // Check if the checkbox is of the same damage type and has a value less than or equal to the selected checkbox's value
+            // then the checkbox should be checked. Otherwise, it should be unchecked.
+            if (otherDamageType !== damageType) {
+                continue;
+            }
+            else if (otherDamageType === damageType && otherCheckboxValue < selectedValue) {
+                checkboxes[i].checked = true;
+            } else if (otherDamageType === damageType && otherCheckboxValue === selectedValue) {
+                // Toggle the selected checkbox
+                checkboxes[i].checked = true;
+            } else {
+                checkboxes[i].checked = false;
+            }
+        }
+
+        // Update the mental/stun/phsyicalDamageCheckboxSelected variables with the tn-modifier value of the selected checkbox
+        if (damageType === 'mental') {
+            mentalDamageCheckboxSelected = parseInt(checkbox.getAttribute('tn-modifier'));
+        } else if (damageType === 'stun') {
+            stunDamageCheckboxSelected = parseInt(checkbox.getAttribute('tn-modifier'));
+        } else if (damageType === 'physical') {
+            physicalDamageCheckboxSelected = parseInt(checkbox.getAttribute('tn-modifier'));
+        }
+
+        // Update the selected options for each group
+        const selectedOptionsGroup1 = getSelectedOptions(group1Checkboxes);
+        const selectedOptionsGroup2 = getSelectedOptions(group2Checkboxes);
+        const selectedOptionsGroup3 = getSelectedOptions(group3Checkboxes);
+        const selectedOptionsGroup4 = getSelectedOptions(group4Checkboxes);
+
+        // Update the TN value
+        updateTN();
+
+        // Update the Init value
+        updateInit();
+    }
+
+    // Function to update the TN based on the selected damage checkboxes
+    function updateTN() {
+        // Get the user input for the base TN
+        const tnInput = document.getElementById("tn-input");
+        let totalTNValue = 0; // Define totalTNValue here
+
+        // Using the mental/stun/physicalDamageCheckboxSelected variables, calculate the total TN value
+        const totalSelectedDamageCount = mentalDamageCheckboxSelected + stunDamageCheckboxSelected + physicalDamageCheckboxSelected;
+
+        // set totalTNValue equal to the totalSelectedDamageCount plus the tnInput
+        totalTNValue = totalSelectedDamageCount + parseInt(tnInput.value);
+
+        // Update the total TN value element
+        const totalTN = document.getElementById("total-tn");
+        if (totalTN) {
+            totalTN.textContent = "Total TN: " + totalTNValue;
+        }
+    }
+
+    // Function to update the Init based on the selected damage checkboxes
+    function updateInit() {
+        // Get the user input for the base INIT
+        const initInput = document.getElementById("init-input");
+        let totalInitValue = 0; // Define totalInitValue here
+
+        // Using the mental/stun/physicalDamageCheckboxSelected variables, calculate the total INIT value
+        const totalSelectedDamageCount = mentalDamageCheckboxSelected + stunDamageCheckboxSelected + physicalDamageCheckboxSelected;
+
+        // set totalInitValue equal to initInput minus the totalSelectedDamageCount
+        totalInitValue = parseInt(initInput.value) - totalSelectedDamageCount;
+
+        // Update the total INIT value element
+        const totalInit = document.getElementById("total-init");
+        if (totalInit) {
+            totalInit.textContent = "Total INIT: " + totalInitValue;
+        }
+    }
+
+    // Add event listener to the Condition Monitor grid-container
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxesContainer = document.querySelector('.grid-container');
+
+        checkboxesContainer.addEventListener('change', function(event) {
+            const targetCheckbox = event.target;
+
+            // Ensure the change event is from a checkbox with the class "damage-checkbox"
+            if (targetCheckbox.classList.contains('damage-checkbox')) {
+                // Call the function to handle the checkbox selection
+                handleCheckboxSelection(targetCheckbox);
+            }
+        })
+    })
+  
+    // Function to calculate the base Reaction attribute value
+    function calculateBaseReaction() {
+        const intelligenceValue = getAttributeValue(4); // Index 4 is the Intelligence attribute
+        const dexterityValue = getAttributeValue(1); // Index 1 is the Dexterity attribute
+
+        const baseReactionValue = Math.floor((intelligenceValue + dexterityValue) / 2);
+
+        // Update the reaction base value element
+        const reactionBaseValueElement = document.getElementById("reaction-base-value");
+        if (reactionBaseValueElement) {
+            reactionBaseValueElement.textContent = baseReactionValue;
+        }
+
+        return baseReactionValue;
+    }
+  
+    // Function to update the reaction base value
+    function updateReactionValue() {
+        const reactionBaseValueElement = document.getElementById("reaction-base-value");
+        if (reactionBaseValueElement) {
+            const reactionBaseValue = calculateBaseReaction();
+            const reactionMutationsValue = parseFloat(document.querySelector('input[name="reaction-mutations"]').value) || 0;
+            const reactionMagicValue = parseFloat(document.querySelector('input[name="reaction-magic"]').value) || 0;
+            const reactionMiscValue = parseFloat(document.querySelector('input[name="reaction-misc"]').value) || 0;
+            const totalReactionValue = reactionBaseValue + reactionMutationsValue + reactionMagicValue + reactionMiscValue;
+            reactionBaseValueElement.textContent = reactionBaseValue;
+            // Also, update the total Reaction value in the last cell of the row (data-index="7")
+            const totalReactionCell = document.querySelector(".total[data-index='7']");
+            if (totalReactionCell) {
+            totalReactionCell.textContent = totalReactionValue;
+            }
+        }
+    }
+
+    // Function to calculate the total Reaction attribute value
+    function calculateTotalReaction() {
+        const baseReactionValue = calculateBaseReaction();
+        const reactionMutationsValue = parseFloat(document.querySelector('input[name="reaction-mutations"]').value) || 0;
+        const reactionMagicValue = parseFloat(document.querySelector('input[name="reaction-magic"]').value) || 0;
+        const reactionMiscValue = parseFloat(document.querySelector('input[name="reaction-misc"]').value) || 0;
+
+        const totalReactionValue = baseReactionValue + reactionMutationsValue + reactionMagicValue + reactionMiscValue;
+
+        return totalReactionValue;
+    }
+
+
+    // Function to update the total Reaction value
+    function updateTotalReactionValue() {
+        const totalReactionValueElement = document.querySelector(".total[data-index='7']");
+        if (totalReactionValueElement) {
+            const totalReactionValue = calculateTotalReaction();
+            totalReactionValueElement.textContent = totalReactionValue;
+        
+            // Update the Control Dice Pool total with the new Reaction value
+            const controlDicePoolTotalCell = document.getElementById("control-base");
+            if (controlDicePoolTotalCell) {
+                controlDicePoolTotalCell.textContent = Math.floor(totalReactionValue); // Rounding down to the nearest whole number
+            }
+        }
+    }
+  
+    // Function to roll initiative
+    function rollInitiative() {
+      // Perform the logic for rolling initiative
+      // For example, generate a random number between 1 and 20
+      const initiativeRoll = Math.floor(Math.random() * 20) + 1;
+    }
+    
+    // Function to calculate the Combat base rating
+    function calculateCombatBaseRating() {
+      const charismaValue = getAttributeValue(3); // Index 3 corresponds to the attribute "Charisma"
+      const intelligenceValue = getAttributeValue(4); // Index 4 corresponds to the attribute "Intelligence"
+      const willpowerValue = getAttributeValue(5); // Index 5 corresponds to the attribute "Willpower"
+  
+      const baseRating = (charismaValue + intelligenceValue + willpowerValue) / 2;
+  
+      return Math.floor(baseRating);
+    }
+  
+    // Function to retrieve the attribute value by index
+    function getAttributeValue(index) {
+      const attributeElement = document.querySelector(
+        `.attribute-input[data-index="${index}"]`
+      );
+      if (attributeElement) {
+        return parseFloat(attributeElement.value);
+      }
+      return 0; // Default value if the attribute element is not found
+    }
+  
+    // Function to update the Combat Base Rating
+    function updateCombatBase() {
+      const combatBaseElement = document.getElementById("combat-base");
+      if (combatBaseElement) {
+        combatBaseElement.textContent = calculateCombatBaseRating();
+        calculateCombatDicePoolTotal(); // Update the Combat Dice Pool total when Combat Base Rating changes
+      }
+    }
+  
+    // Function to update the Spell Pool Base Rating
+    function updateSpellPoolBase() {
+      const spellPoolBaseElement = document.getElementById("spell-base");
+      if (spellPoolBaseElement) {
+        spellPoolBaseElement.textContent = calculateSpellPoolBaseRating();
+        calculateSpellDicePoolTotal(); // Update the Spell Dice Pool total when Spell Pool Base Rating changes
+      }
+    }
+  
+    // Function to retrieve combat-misc-input element
+    function getCombatMiscInput() {
+      const combatMiscInput = document.getElementById("combat-misc-input");
+      if (combatMiscInput) {
+        return combatMiscInput;
+      }
+      return 0; // Default value if the combat-misc-input element is not found
+    }
+  
+    // Function to listen for changes in the combat-misc-input field
+    function handleCombatMiscInputChange(event) {
+      const combatMiscInput = event.target;
+      const combatMiscValue = parseFloat(combatMiscInput.value) || 0;
+      const combatMiscTotal = document.getElementById("combat-misc-total");
+      if (combatMiscTotal) {
+        combatMiscTotal.textContent = combatMiscValue;
+        calculateCombatDicePoolTotal(); // Update the Combat Dice Pool total when combat misc input changes
+      }
+    }
+  
+    // Function to calculate the Combat Dice Pool total and update the total cell
+    function calculateCombatDicePoolTotal() {
+      const combatDicePool = calculateCombatDicePool();
+      const combatDicePoolTotalCell = document.getElementById("combat-dice-pool-total");
+      if (combatDicePoolTotalCell) {
+        combatDicePoolTotalCell.textContent = Math.floor(combatDicePool); // Rounding down to the nearest whole number
+      }
+    }
+  
+    // Function to calculate the Combat Dice Pool
+    function calculateCombatDicePool() {
+      const combatBase = calculateCombatBaseRating();
+      const combatMiscValue = parseFloat(getCombatMiscInput().value) || 0;
+      const combatDicePool = combatBase + combatMiscValue;
+      return combatDicePool;
+    }
+  
+    // Function to retrieve spell-pool-misc-input element
+    function getSpellPoolMiscInput() {
+      const spellPoolMiscInput = document.getElementById("spell-misc-input");
+      if (spellPoolMiscInput) {
+        return spellPoolMiscInput;
+      }
+      return 0; // Default value if the spell-pool-misc-input element is not found
+    }
+  
+    // Function to listen for changes in the spell-pool-misc-input field
+    function handleSpellMiscInputChange(event) {
+      const spellPoolMiscInput = event.target;
+      const spellPoolMiscValue = parseFloat(spellPoolMiscInput.value) || 0;
+      const spellPoolMiscTotal = document.getElementById("spell-misc-total");
+      if (spellPoolMiscTotal) {
+        spellPoolMiscTotal.textContent = spellPoolMiscValue;
+        calculateSpellDicePoolTotal(); // Update the Spell Dice Pool total when spell pool misc input changes
+      }
+    }
+  
+    // Function to calculate the Spell Pool Base Rating
+    function calculateSpellPoolBaseRating() {
+      const dexterityValue = getAttributeValue(1); // Index 1 corresponds to the attribute "Dexterity"
+      const intelligenceValue = getAttributeValue(4); // Index 4 corresponds to the attribute "Intelligence"
+      const willpowerValue = getAttributeValue(5); // Index 5 corresponds to the attribute "Willpower"
+  
+      const spellPoolBaseRating = (dexterityValue + intelligenceValue + willpowerValue) / 2;
+  
+      return Math.floor(spellPoolBaseRating);
+    }
+  
+    // Function to calculate the Spell Pool total and update the total cell
+    function calculateSpellPoolTotal() {
+      const spellPool = calculateSpellPool();
+      const spellPoolTotalCell = document.getElementById("spell-dice-pool-total");
+      if (spellPoolTotalCell) {
+        spellPoolTotalCell.textContent = Math.floor(spellPool); // Rounding down to the nearest whole number
+      }
+    }
+  
+    // Function to calculate the Spell Pool
+    function calculateSpellPool() {
+      const spellPoolBase = calculateSpellPoolBaseRating();
+      const spellPoolMiscValue = parseFloat(getSpellPoolMiscInput().value) || 0;
+      const spellPool = spellPoolBase + spellPoolMiscValue;
+      return spellPool;
+    }
+  
+    // Function to calculate the Spell Dice Pool total and update the total cell
+    function calculateSpellDicePoolTotal() {
+      const spellDicePool = calculateSpellDicePool();
+      const spellDicePoolTotalCell = document.getElementById("spell-dice-pool-total");
+      if (spellDicePoolTotalCell) {
+        spellDicePoolTotalCell.textContent = Math.floor(spellDicePool); // Rounding down to the nearest whole number
+      }
+    }
+  
+    // Function to calculate the Spell Dice Pool
+    function calculateSpellDicePool() {
+      const spellPool = calculateSpellPool();
+      const spellDicePool = spellPool;
+      return spellDicePool;
+    }
+
+    // Function to assign the Reaction total to the Control Base Rating
+    function calculateControlBaseReaction() {
+        const controlBaseRating = getAttributeValue(7); // Index 7 corresponds to the attribute "Reaction"
+        const controlBaseElement = document.getElementById("control-base");
+        if (controlBaseElement) {
+            controlBaseElement.textContent = controlBaseRating;
+        }
+        return controlBaseRating;
+    }
+
+    // Function to listen for changes in the control-misc-input field
+    function handleControlMiscInputChange(event) {
+        const controlMiscInput = event.target;
+        const controlMiscValue = parseFloat(controlMiscInput.value) || 0;
+        const controlMiscTotal = document.getElementById("control-dice-pool-total");
+        if (controlMiscTotal) {
+            controlMiscTotal.textContent = controlMiscValue;
+        }
+
+        // Call any other relevant functions that need to be updated when control misc input changes
+        calculateControlDicePoolTotal();
+        }
+
+    // Function to update the Control Base Rating
+    function updateControlBase() {
+        const controlBaseElement = document.getElementById("control-base");
+        if (controlBaseElement) {
+            controlBaseElement.textContent = calculateBaseReaction();
+            calculateControlDicePoolTotal(); // Update the Control Dice Pool total when Control Base Rating changes
+        }
+    }
+    
+    // Function to calculate the Control Dice Pool total and update the total cell
+    function calculateControlDicePoolTotal() {
+        const controlBaseValue = parseFloat(document.getElementById("control-base").textContent) || 0;
+        const controlMiscValue = parseFloat(document.getElementById("control-misc-input").value) || 0;
+
+        const controlDicePool = controlBaseValue + controlMiscValue;
+        const controlDicePoolTotalCell = document.getElementById("control-dice-pool-total");
+
+        if (controlDicePoolTotalCell) {
+            controlDicePoolTotalCell.textContent = Math.floor(controlDicePool); // Rounding down to the nearest whole number
+        }
+    }
+
+    // Function to calculate the Astral Dice Pool base rating, which is the product of Int+Wil+Mag divided by 2, then assign the value to astral-base
+    function calculateAstralBaseRating() {
+        const intelligenceTotal = getAttributeValue(4); // Index 4 corresponds to the attribute "Intelligence"
+        const willpowerTotal = getAttributeValue(5); // Index 5 corresponds to the attribute "Willpower"
+        const magicTotal = getAttributeValue(6); // Index 6 corresponds to the attribute "Magic"
+        const astralBase = document.getElementById("astral-base");
+
+        if (astralBase) {
+            astralBase.textContent = Math.floor((intelligenceTotal + willpowerTotal + magicTotal)/2); // Rounding down to the nearest whole number
+        }
+        return astralBase;
+    }
+
+    // Function to listen for changes in the astral-misc-input field
+    function handleAstralMiscInputChange(event) {
+        const astralMiscInput = event.target;
+        const astralMiscValue = parseFloat(astralMiscInput.value) || 0;
+        const astralMiscTotal = document.getElementById("astral-misc-total");
+        if (astralMiscTotal) {
+            astralMiscTotal.textContent = astralMiscValue;
+        }
+
+        // Call any other relevant functions that need to be updated when astral misc input changes
+        calculateAstralDicePoolTotal();
+
+        // Update the Astral Base Rating when astral misc input changes
+        calculateAstralBaseRating();
+    }
+
+    // Function to calculate the Astral Dice Pool total and update the total cell
+    function calculateAstralDicePoolTotal() {
+        const astralBaseValue = parseFloat(document.getElementById("astral-base").textContent) || 0;
+        const astralMiscValue = parseFloat(document.getElementById("astral-misc-input").value) || 0;
+
+        const astralDicePool = astralBaseValue + astralMiscValue;
+        const astralDicePoolTotalCell = document.getElementById("astral-dice-pool-total");
+
+        if (astralDicePoolTotalCell) {
+            astralDicePoolTotalCell.textContent = Math.floor(astralDicePool); // Rounding down to the nearest whole number
+        }
+    }
+
+    // Helper function to determine the damage value based on the selected damage type
+    function getDamageValue(damageType, i) {
+        if (i === 1) return `${damageType.toLowerCase()}-no-damage`;
+        else return `${damageType.toLowerCase()}-${getDamageTypeCount(damageType)}-damage-${i}`;
+    }
+
+    // Helper function to determine the number of damage types selected
+    function getDamageTypeCount(damageType) {
+        const radios = document.querySelectorAll(`input[name="${damageType.toLowerCase()}-options"]`);
+        let count = 0;
+        radios.forEach((radio) => {
+            if (radio.checked) count++;
+        });
+        return count;
+    }
+
+    // Helper function to determine the TN increment value based on the selected damage type
+    function getIncrementValue(i) {
+        if (i === 1) return 0;
+        else if (i === 2) return 1;
+        else if (i === 3) return 2;
+        else if (i === 4) return 3;
+        else if (i === 5) return 4;
+    }
+
+    // addSkill function to add a new skill to the table
+    function addSkill() {
+        // Create a new row element
+        const newRow = document.createElement("tr");
+
+        // Create a new cell element for the skill name
+        const skillNameCell = document.createElement("td");
+
+        // Create a new input element for the skill level
+        const skillLevelInput = document.createElement("input");
+
+        // Create a new cell element for the skill total
+        const skillTotalCell = document.createElement("td");
+
+        // Append the skill name cell to the new row
+        newRow.appendChild(skillNameCell);
+
+        // Append the skill level input to the skill name cell
+        skillNameCell.appendChild(skillLevelInput);
+
+        // Append the skill total cell to the new row
+        newRow.appendChild(skillTotalCell);
+
+        // Append the new row to the table
+        const skillsTable = document.querySelector(".skills-table table");
+        skillsTable.appendChild(newRow);
+
+        // Add the "skill-name" class to the skill name cell
+        skillNameCell.classList.add("skill-name");
+
+        // Add the "skill-level" class to the skill level input
+        skillLevelInput.classList.add("skill-level");
+
+        // Add the "skill-total" class to the skill total cell
+        skillTotalCell.classList.add("skill-total");
+
+        // Add the "total" class to the skill total cell
+        skillTotalCell.classList.add("total");
+    }
+  
+    // Function to calculate the row totals for each attribute
+    function calculateRowTotals() {
+        const attributeRows = document.querySelectorAll(".attribute-row");
+
+        attributeRows.forEach((row) => {
+            const cells = row.querySelectorAll(".attribute-input");
+            const totalCell = row.querySelector(".total");
+
+            let rowTotal = 0;
+
+            cells.forEach((cell) => {
+            const cellValue = parseFloat(cell.value) || 0;
+            rowTotal += cellValue;
+            });
+
+            const dataIndex = row.dataset.index;
+
+            // Check if the row corresponds to the Reaction attribute (data-index="7")
+            if (dataIndex === "7") {
+                const reactionBaseValue = calculateBaseReaction();
+                rowTotal += reactionBaseValue;
+
+                // Set the base reaction value to the correct cell
+                const reactionBaseValueElement = row.querySelector(".attribute-value");
+                if (reactionBaseValueElement) {
+                    reactionBaseValueElement.textContent = reactionBaseValue;
+                }
+            }
+
+            // Check if the row corresponds to the Control attribute (data-index="11")
+            if (dataIndex === "11") {
+                const controlBaseValue = calculateControlBaseReaction();
+                rowTotal += controlBaseValue;
+
+                // Set the base control value to the correct cell
+                const controlBaseValueElement = row.querySelector(".attribute-value");
+                if (controlBaseValueElement) {
+                    controlBaseValueElement.textContent = controlBaseValue;
+                }
+
+                // Update the Control Dice Pool total
+                calculateControlDicePoolTotal();
+            }
+
+            // Check if the row corresponds to the Astral attribute (data-index="12")
+            if (dataIndex === "12") {
+                const astralBaseValue = calculateAstralBaseRating();
+                rowTotal += astralBaseValue;
+
+                // Set the base astral value to the correct cell
+                const astralBaseValueElement = row.querySelector(".attribute-value");
+                if (astralBaseValueElement) {
+                    astralBaseValueElement.textContent = astralBaseValue;
+                }
+            }
+
+            totalCell.textContent = rowTotal;
+        });
+
+        updateCombatBase(); // Update the Combat Base Rating
+        updateSpellPoolBase(); // Update the Spell Pool Base Rating
+        updateTotalReactionValue(); // Update the reaction value
+    }
+  
+    // Call the calculateRowTotals function to calculate the initial row totals
+    calculateRowTotals();
+  
+    // Update the row totals, Combat Base Rating, and Combat Dice Pool total when attribute input fields change
+    const attributeInputs = document.querySelectorAll(".attribute-input");
+    Array.from(attributeInputs).forEach((input) => {
+      input.addEventListener("input", calculateRowTotals);
+    });
+  
+    // Add event listener for combat misc input change
+    const combatMiscInput = document.getElementById("combat-misc-input");
+    if (combatMiscInput) {
+      combatMiscInput.addEventListener("input", handleCombatMiscInputChange);
+    }
+  
+    // Add event listener for spell misc input change
+    const spellMiscInput = document.getElementById("spell-misc-input");
+    if (spellMiscInput) {
+      spellMiscInput.addEventListener("input", handleSpellMiscInputChange);
+    }
+
+    // Add event listeners for "reaction-base-value", "reaction-mutations", "reaction-magic", and "reaction-misc" input changes
+    const reactionBaseValueInput = document.getElementById("reaction-base-value");
+    if (reactionBaseValueInput) {
+        reactionBaseValueInput.addEventListener("input", updateReactionValue);
+    }
+
+    const reactionMutationsInput = document.querySelector('input[name="reaction-mutations"]');
+    if (reactionMutationsInput) {
+        reactionMutationsInput.addEventListener("input", calculateRowTotals);
+    }
+
+    const reactionMagicInput = document.querySelector('input[name="reaction-magic"]');
+    if (reactionMagicInput) {
+        reactionMagicInput.addEventListener("input", calculateRowTotals);
+    }
+
+    const reactionMiscInput = document.querySelector('input[name="reaction-misc"]');
+    if (reactionMiscInput) {
+        reactionMiscInput.addEventListener("input", calculateRowTotals);
+    }
+
+    // Add event listeners for control misc input change
+    const controlMiscInput = document.getElementById("control-misc-input");
+    if (controlMiscInput) {
+        controlMiscInput.addEventListener("input", handleControlMiscInputChange);
+    }
+
+    // Add event listeners for astral misc input change
+    const astralMiscInput = document.getElementById("astral-misc-input");
+    if (astralMiscInput) {
+        astralMiscInput.addEventListener("input", handleAstralMiscInputChange);
+    }
+    
+    // Add event listener for the Init input field
+    const initInput = document.getElementById("init-input");
+    if (initInput) {
+      initInput.addEventListener("input", updateInit);
+    }
+
+    // Add event listener to TN input to trigger the updateTN function
+    const tnInput = document.getElementById("tn-input");
+    if (tnInput) {
+      tnInput.addEventListener("input", updateTN);
+    }
+  </script>  
+</body>
+</html>

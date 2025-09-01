@@ -1,0 +1,17 @@
+{
+  "Mutations": {
+    "entry_one": {
+      "name": "",
+      "description": "",
+      "cost_subtract_from_humanity": "",
+      "rating": ""
+    },
+    "entry_two": {
+      "name": "",
+      "description": "",
+      "cost_subtract_from_humanity": "",
+      "rating": ""
+    },
+    // ... and so on for each entry in the mutations table
+  }
+}

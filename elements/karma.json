@@ -1,0 +1,8 @@
+{
+    "Karma": {
+        "good": "", // Total accrued from karma table
+        "used": "", // Total spent from karma table
+        "total": "", // Formula representing the difference between Good and Used
+        "pool": "" // Formula representing the RoundDown of (Total/10)+1
+    }
+}

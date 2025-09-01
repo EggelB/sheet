@@ -1,0 +1,67 @@
+{
+  "Attributes": {
+    "Body": { // Using "Body" as the key
+      "base": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    },
+    "Dexterity": { // Using "Dexterity" as the key
+      "base": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    },
+    "Strength": { // Using "Strength" as the key
+      "base": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    },
+    "Charisma": { // Using "Charisma" as the key
+      "base": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    },
+    "Intelligence": { // Using "Intelligence" as the key
+      "base": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    },
+    "Willpower": { // Using "Willpower" as the key
+      "base": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    },
+    "Humanity": { // Using "Humanity" as the key
+      "base": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    },
+    "Reaction": { // Using "Reaction" as the key
+      "base": "", // Value from the corresponding cell, blank if static, formula as string if formula. Note: You mentioned the base value is derived from "(Intelligence Total + Dexterity Total)/2".
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    },
+    "Magic": { // Using "Magic" as the key
+      "base": "", // Static value of 6 - total cost of mutations
+      "mutations": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "magic": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "misc": "", // Value from the corresponding cell, blank if static, formula as string if formula
+      "total": "Formula representing the sum of Base, Mutations, Magic, and Misc" // Precise description of what the formula represents
+    }
+  }
+}
