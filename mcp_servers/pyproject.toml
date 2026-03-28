@@ -1,0 +1,16 @@
+[project]
+name = "tempo-mcp-servers"
+version = "0.2.0"
+description = "TEMPO: Tactical Engine for Multi-agent Process Orchestration — 4-server MCP fleet for VS Code Copilot"
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["mcp_servers/tests"]
+markers = [
+    "benchmark: benchmark harness tests (select with -m benchmark)",
+]

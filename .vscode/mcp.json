@@ -1,0 +1,48 @@
+{
+    "servers": {
+        "tempo.session": {
+            "command": "C:\\Users\\bryce\\Repos\\sheet\\sheet\\.venv\\Scripts\\python.exe",
+            "args": [
+                "-m",
+                "mcp_servers.session.server"
+            ],
+            "cwd": "C:\\Users\\bryce\\Repos\\sheet\\sheet",
+            "env": {
+                "PYTHONPATH": "C:\\Users\\bryce\\Repos\\sheet\\sheet"
+            }
+        },
+        "tempo.executor": {
+            "command": "C:\\Users\\bryce\\Repos\\sheet\\sheet\\.venv\\Scripts\\python.exe",
+            "args": [
+                "-m",
+                "mcp_servers.executor.server"
+            ],
+            "cwd": "C:\\Users\\bryce\\Repos\\sheet\\sheet",
+            "env": {
+                "PYTHONPATH": "C:\\Users\\bryce\\Repos\\sheet\\sheet"
+            }
+        },
+        "tempo.memory": {
+            "command": "C:\\Users\\bryce\\Repos\\sheet\\sheet\\.venv\\Scripts\\python.exe",
+            "args": [
+                "-m",
+                "mcp_servers.memory.server"
+            ],
+            "cwd": "C:\\Users\\bryce\\Repos\\sheet\\sheet",
+            "env": {
+                "PYTHONPATH": "C:\\Users\\bryce\\Repos\\sheet\\sheet"
+            }
+        },
+        "tempo.workflow": {
+            "command": "C:\\Users\\bryce\\Repos\\sheet\\sheet\\.venv\\Scripts\\python.exe",
+            "args": [
+                "-m",
+                "mcp_servers.workflow.server"
+            ],
+            "cwd": "C:\\Users\\bryce\\Repos\\sheet\\sheet",
+            "env": {
+                "PYTHONPATH": "C:\\Users\\bryce\\Repos\\sheet\\sheet"
+            }
+        }
+    }
+}

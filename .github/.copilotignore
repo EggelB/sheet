@@ -1,0 +1,50 @@
+# ATLAS Baseline .copilotignore
+# Excludes files that pollute the context window without contributing signal.
+# Extend this file as your project grows — more exclusions = better agent focus.
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build and distribution
+dist/
+build/
+*.egg-info/
+
+# Test artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Large binary and media assets (rarely useful in context)
+assets/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+# Archive files
+*.zip
+*.tar.gz
+*.gz
+
+# ATLAS memory archive (historical — Scribe reads selectively via tool)
+.github/archives/
+
+# State snapshots (StateManager reads selectively via tool)
+.github/state_snapshots/
