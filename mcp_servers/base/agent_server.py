@@ -53,7 +53,10 @@ class BaseAgentServer(ABC):
         """Initialize base agent server with tool registry."""
         self.server = Server(self.agent_name)
         self._tool_registry: dict[str, Any] = {}
-        self.workspace_root: str = str(Path(".").resolve())
+        # Anchor to the repo root (two levels up from mcp_servers/base/)
+        # so load_config() finds .tempo.config.toml regardless of the
+        # working directory the MCP server process was launched from.
+        self.workspace_root: str = str(Path(__file__).resolve().parent.parent.parent)
         self._register_tools()
     
     @property

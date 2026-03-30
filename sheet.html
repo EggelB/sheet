@@ -1,0 +1,1381 @@
+﻿<script type="text/worker">
+// ═══════════════════════════════════════════════════════════
+// REGION 1 — Constants
+// ═══════════════════════════════════════════════════════════
+var SYNC_PROXY_URL = ''; // Fill with Cloudflare Worker URL after Phase 5 deployment
+
+// Individual CM box attributes (32 total — 10 mental, 11 stun, 11 physical)
+var CM_BOX_ATTRS = [
+  'cm_mental_l1','cm_mental_l2',
+  'cm_mental_m1','cm_mental_m2','cm_mental_m3',
+  'cm_mental_s1','cm_mental_s2','cm_mental_s3','cm_mental_s4',
+  'cm_mental_d',
+  'cm_stun_l1','cm_stun_l2',
+  'cm_stun_m1','cm_stun_m2','cm_stun_m3',
+  'cm_stun_s1','cm_stun_s2','cm_stun_s3','cm_stun_s4',
+  'cm_stun_d','cm_stun_u',
+  'cm_physical_l1','cm_physical_l2',
+  'cm_physical_m1','cm_physical_m2','cm_physical_m3',
+  'cm_physical_s1','cm_physical_s2','cm_physical_s3','cm_physical_s4',
+  'cm_physical_d','cm_physical_u'
+];
+
+// ═══════════════════════════════════════════════════════════
+// REGION 2 — Cascade workers (vanilla Roll20 Sheet Worker API)
+// ═══════════════════════════════════════════════════════════
+// All values from getAttrs() are strings — parseInt(v, 10) || 0 guards
+// against string concatenation and NaN from empty attribute slots.
+
+// ─── Layer 2: Core Attribute Totals (8 workers) ──────────
+
+// Helper: sum 4-part attribute (base + mutations + magic + misc)
+var calcAttr4 = function(prefix) {
+  on('change:' + prefix + '_base change:' + prefix + '_mutations change:' + prefix + '_magic change:' + prefix + '_misc', function() {
+    getAttrs([prefix + '_base', prefix + '_mutations', prefix + '_magic', prefix + '_misc'], function(v) {
+      var out = {};
+      out[prefix] = (parseInt(v[prefix + '_base'], 10) || 0)
+                  + (parseInt(v[prefix + '_mutations'], 10) || 0)
+                  + (parseInt(v[prefix + '_magic'], 10) || 0)
+                  + (parseInt(v[prefix + '_misc'], 10) || 0);
+      setAttrs(out);
+    });
+  });
+};
+calcAttr4('body');
+calcAttr4('dex');
+calcAttr4('str');
+calcAttr4('cha');
+calcAttr4('int');
+calcAttr4('wil');
+calcAttr4('hum');
+
+// mag has no _mutations or _magic sub-fields by design
+on('change:mag_base change:mag_misc', function() {
+  getAttrs(['mag_base', 'mag_misc'], function(v) {
+    setAttrs({ mag: (parseInt(v.mag_base, 10) || 0) + (parseInt(v.mag_misc, 10) || 0) });
+  });
+});
+
+// ─── Layer 3: Reaction ───────────────────────────────────
+
+on('change:int change:dex', function() {
+  getAttrs(['int', 'dex'], function(v) {
+    var i = parseInt(v.int, 10) || 0;
+    var d = parseInt(v.dex, 10) || 0;
+    setAttrs({ reaction_base: Math.floor((i + d) / 2) });
+  });
+});
+
+on('change:reaction_base change:reaction_misc', function() {
+  getAttrs(['reaction_base', 'reaction_misc'], function(v) {
+    var base = parseInt(v.reaction_base, 10) || 0;
+    var misc = parseInt(v.reaction_misc, 10) || 0;
+    // Floor at 1: reaction = 0 causes Roll20 @{reaction}d6 errors
+    setAttrs({ reaction: Math.max(1, base + misc) });
+  });
+});
+
+// ─── Layer 4a: Dice Pool Bases ───────────────────────────
+
+on('change:cha change:int change:wil', function() {
+  getAttrs(['cha', 'int', 'wil'], function(v) {
+    var cha = parseInt(v.cha, 10) || 0;
+    var i   = parseInt(v.int, 10) || 0;
+    var wil = parseInt(v.wil, 10) || 0;
+    setAttrs({ pool_spell_base: Math.max(0, Math.floor((cha + i + wil) / 2)) });
+  });
+});
+
+on('change:dex change:int change:wil', function() {
+  getAttrs(['dex', 'int', 'wil'], function(v) {
+    var dex = parseInt(v.dex, 10) || 0;
+    var i   = parseInt(v.int, 10) || 0;
+    var wil = parseInt(v.wil, 10) || 0;
+    setAttrs({ pool_combat_base: Math.max(0, Math.floor((dex + i + wil) / 2)) });
+  });
+});
+
+on('change:reaction', function() {
+  getAttrs(['reaction'], function(v) {
+    setAttrs({ pool_control_base: parseInt(v.reaction, 10) || 0 });
+  });
+});
+
+on('change:int change:wil change:mag', function() {
+  getAttrs(['int', 'wil', 'mag'], function(v) {
+    var i   = parseInt(v.int, 10) || 0;
+    var wil = parseInt(v.wil, 10) || 0;
+    var mag = parseInt(v.mag, 10) || 0;
+    setAttrs({ pool_astral_base: Math.max(0, Math.floor((i + wil + mag) / 3)) });
+  });
+});
+
+// ─── Layer 4b: Dice Pool Totals ──────────────────────────
+
+var calcPoolTotal = function(name) {
+  on('change:pool_' + name + '_base change:pool_' + name + '_misc', function() {
+    getAttrs(['pool_' + name + '_base', 'pool_' + name + '_misc'], function(v) {
+      var base = parseInt(v['pool_' + name + '_base'], 10) || 0;
+      var misc = parseInt(v['pool_' + name + '_misc'], 10) || 0;
+      var out = {};
+      out['pool_' + name] = Math.max(0, base + misc);
+      setAttrs(out);
+    });
+  });
+};
+calcPoolTotal('spell');
+calcPoolTotal('combat');
+calcPoolTotal('control');
+calcPoolTotal('astral');
+
+// ─── Layer 4c: Initiative Score ──────────────────────────
+
+on('change:reaction change:init_reaction_mod change:init_misc_mod', function() {
+  getAttrs(['reaction', 'init_reaction_mod', 'init_misc_mod'], function(v) {
+    var reaction       = parseInt(v.reaction, 10) || 0;
+    var init_react_mod = parseInt(v.init_reaction_mod, 10) || 0;
+    var init_misc_mod  = parseInt(v.init_misc_mod, 10) || 0;
+    setAttrs({ init_score: reaction + init_react_mod + init_misc_mod });
+  });
+});
+
+// ─── Layer 5a: Encumbrance ───────────────────────────────
+
+on('change:str change:body', function() {
+  getAttrs(['str', 'body'], function(v) {
+    var s = parseInt(v.str, 10) || 0;
+    var b = parseInt(v.body, 10) || 0;
+    setAttrs({ ep_max: Math.max(s, b) * 4 + Math.floor(Math.min(s, b) / 2) });
+  });
+});
+
+// EP Total — sums weapon_ep + equip_ep across repeating sections
+on('change:repeating_weapons:weapon_ep remove:repeating_weapons change:repeating_equipment:equip_ep remove:repeating_equipment', function() {
+  getSectionIDs('repeating_weapons', function(weaponIds) {
+    getSectionIDs('repeating_equipment', function(equipIds) {
+      var fields = [];
+      weaponIds.forEach(function(id) { fields.push('repeating_weapons_' + id + '_weapon_ep'); });
+      equipIds.forEach(function(id) { fields.push('repeating_equipment_' + id + '_equip_ep'); });
+      getAttrs(fields, function(v) {
+        var total = 0;
+        weaponIds.forEach(function(id) { total += parseFloat(v['repeating_weapons_' + id + '_weapon_ep'] || 0); });
+        equipIds.forEach(function(id) { total += parseFloat(v['repeating_equipment_' + id + '_equip_ep'] || 0); });
+        setAttrs({ ep_total: total });
+      });
+    });
+  });
+});
+
+// ─── Layer 5b: Armor Totals ──────────────────────────────
+
+on('change:armor_torso_piercing change:armor_torso_slashing change:armor_torso_impact change:armor_legs_piercing change:armor_legs_slashing change:armor_legs_impact change:armor_head_piercing change:armor_head_slashing change:armor_head_impact', function() {
+  getAttrs([
+    'armor_torso_piercing', 'armor_torso_slashing', 'armor_torso_impact',
+    'armor_legs_piercing',  'armor_legs_slashing',  'armor_legs_impact',
+    'armor_head_piercing',  'armor_head_slashing',  'armor_head_impact',
+  ], function(v) {
+    setAttrs({
+      armor_total_piercing: (parseInt(v.armor_torso_piercing, 10) || 0) + (parseInt(v.armor_legs_piercing, 10) || 0) + (parseInt(v.armor_head_piercing, 10) || 0),
+      armor_total_slashing: (parseInt(v.armor_torso_slashing, 10) || 0) + (parseInt(v.armor_legs_slashing, 10) || 0) + (parseInt(v.armor_head_slashing, 10) || 0),
+      armor_total_impact:   (parseInt(v.armor_torso_impact, 10) || 0)   + (parseInt(v.armor_legs_impact, 10) || 0)   + (parseInt(v.armor_head_impact, 10) || 0),
+    });
+  });
+});
+
+// ─── Layer 5c: Skill Total (per-row repeating) ───────────
+
+on('change:repeating_skills:skill_base change:repeating_skills:skill_foci change:repeating_skills:skill_misc', function() {
+  getAttrs(['skill_base', 'skill_foci', 'skill_misc'], function(v) {
+    setAttrs({
+      skill_total: (parseInt(v.skill_base, 10) || 0)
+                 + (parseInt(v.skill_foci, 10) || 0)
+                 + (parseInt(v.skill_misc, 10) || 0)
+    });
+  });
+});
+
+// ─── Layer 5d: Adept Power Points ────────────────────────
+
+on('change:mag', function() {
+  getAttrs(['mag'], function(v) {
+    setAttrs({ power_points_max: parseInt(v.mag, 10) || 0 });
+  });
+});
+
+on('change:repeating_adept_powers:power_pp_cost_value remove:repeating_adept_powers', function() {
+  getSectionIDs('repeating_adept_powers', function(ids) {
+    var fields = [];
+    ids.forEach(function(id) { fields.push('repeating_adept_powers_' + id + '_power_pp_cost_value'); });
+    getAttrs(fields, function(v) {
+      var total = 0;
+      ids.forEach(function(id) { total += parseFloat(v['repeating_adept_powers_' + id + '_power_pp_cost_value'] || 0); });
+      setAttrs({ power_points_used: total });
+    });
+  });
+});
+
+on('change:power_points_max change:power_points_used', function() {
+  getAttrs(['power_points_max', 'power_points_used'], function(v) {
+    var max  = parseFloat(v.power_points_max  || 0);
+    var used = parseFloat(v.power_points_used || 0);
+    setAttrs({ power_points_remaining: max - used });
+  });
+});
+
+// ─── Layer 5e: Essence Total ─────────────────────────────
+
+on('change:repeating_mutations:mutation_essence remove:repeating_mutations', function() {
+  getSectionIDs('repeating_mutations', function(ids) {
+    var fields = [];
+    ids.forEach(function(id) { fields.push('repeating_mutations_' + id + '_mutation_essence'); });
+    getAttrs(fields, function(v) {
+      var total = 0;
+      ids.forEach(function(id) { total += parseFloat(v['repeating_mutations_' + id + '_mutation_essence'] || 0); });
+      setAttrs({ essence_total: total });
+    });
+  });
+});
+
+// ─── Layer 6a: Karma Total ───────────────────────────────
+
+on('change:karma_good change:karma_used', function() {
+  getAttrs(['karma_good', 'karma_used'], function(v) {
+    setAttrs({
+      karma_total: (parseInt(v.karma_good, 10) || 0) + (parseInt(v.karma_used, 10) || 0)
+    });
+  });
+});
+
+// ─── Layer 6b: Condition Monitor Penalties ───────────────
+// Each track returns the penalty of its highest filled damage level.
+// Penalties STACK (sum) across all three tracks.
+var calcCMPenalty = function() {
+  getAttrs(CM_BOX_ATTRS, function(v) {
+    function chk(k) { return parseInt(v[k]) === 1; }
+    function trackLevel(p, hasDown) {
+      if (chk(p + '_d'))                                              return 4;
+      if (hasDown && chk(p + '_u'))                                   return 5;
+      if (chk(p+'_s4') || chk(p+'_s3') || chk(p+'_s2') || chk(p+'_s1')) return 3;
+      if (chk(p+'_m3') || chk(p+'_m2') || chk(p+'_m1'))             return 2;
+      if (chk(p+'_l2') || chk(p+'_l1'))                              return 1;
+      return 0;
+    }
+    var tn_mod = trackLevel('cm_mental',   false)
+               + trackLevel('cm_stun',     true)
+               + trackLevel('cm_physical', true);
+    setAttrs({ cm_tn_mod: tn_mod, cm_init_mod: -1 * tn_mod });
+  });
+};
+on(CM_BOX_ATTRS.map(function(a) { return 'change:' + a; }).join(' '), calcCMPenalty);
+
+// ─── Layer 6c: Sustained Spell TN + Warning Level ────────
+
+on('change:spells_sustained', function() {
+  getAttrs(['spells_sustained'], function(v) {
+    var sustained = parseInt(v.spells_sustained, 10) || 0;
+    var tn_mod    = sustained * 2;
+    var level;
+    if (tn_mod >= 6)      { level = '3'; }
+    else if (tn_mod >= 4) { level = '2'; }
+    else if (tn_mod >= 2) { level = '1'; }
+    else                  { level = '0'; }
+    setAttrs({ sustained_tn_mod: tn_mod, tn_warning_level: level });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// REGION 3 — Sheet opens handler
+// ═══════════════════════════════════════════════════════════
+// Fires on every sheet load. Re-triggers all cascade roots so computed
+// fields are in sync even when attributes were modified externally.
+
+on('sheet:opened', function() {
+  getAttrs([
+    'body_base', 'dex_base', 'str_base', 'cha_base', 'int_base', 'wil_base',
+    'hum_base', 'mag_base', 'karma_good', 'spells_sustained'
+  ], function(v) {
+    // setAttrs with same values + silent:false re-triggers change handlers
+    setAttrs({
+      body_base:        v.body_base,
+      dex_base:         v.dex_base,
+      str_base:         v.str_base,
+      cha_base:         v.cha_base,
+      int_base:         v.int_base,
+      wil_base:         v.wil_base,
+      hum_base:         v.hum_base,
+      mag_base:         v.mag_base,
+      karma_good:       v.karma_good,
+      spells_sustained: v.spells_sustained,
+    });
+  });
+  calcCMPenalty();
+
+  // Recalculate all skill totals on sheet open
+  getSectionIDs('repeating_skills', function(ids) {
+    var fields = [];
+    ids.forEach(function(id) {
+      var p = 'repeating_skills_' + id + '_';
+      fields.push(p + 'skill_base', p + 'skill_foci', p + 'skill_misc');
+    });
+    getAttrs(fields, function(v) {
+      var out = {};
+      ids.forEach(function(id) {
+        var p = 'repeating_skills_' + id + '_';
+        out[p + 'skill_total'] =
+          (parseInt(v[p + 'skill_base'], 10) || 0) +
+          (parseInt(v[p + 'skill_foci'], 10) || 0) +
+          (parseInt(v[p + 'skill_misc'], 10) || 0);
+      });
+      setAttrs(out);
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// REGION 3b — Spirit Calculator
+// ═══════════════════════════════════════════════════════════
+
+on('change:spirit_type change:spirit_force', function() {
+  getAttrs(['spirit_type', 'spirit_force'], function(v) {
+    var type = v.spirit_type || '';
+    var F = Math.max(parseInt(v.spirit_force) || 1, 1);
+    var out = { spirit_b:'', spirit_q:'', spirit_s:'', spirit_c:'', spirit_i:'',
+                spirit_w:'', spirit_e:'', spirit_r:'', spirit_init:'',
+                spirit_attack:'', spirit_powers:'', spirit_weaknesses:'' };
+    if (!type) { setAttrs(out); return; }
+
+    // Category mapping
+    var CAT = {
+      city:'man', field:'man', hearth:'man',
+      mist:'sky', storm:'sky', wind:'sky',
+      desert:'land', forest_spirit:'land', mountain:'land', prairie:'land',
+      lake:'water_s', river:'water_s', sea:'water_s', swamp:'water_s',
+      air_elemental:'air_e', fire_elemental:'fire_e',
+      earth_elemental:'earth_e', water_elemental:'water_e'
+    };
+
+    var cat = CAT[type];
+    var m = Math.max; // shorthand
+
+    // Stat formulas per category: [B, Q_val, Q_mult, S, R_val, R_mult, init_phys_base, attack_str]
+    var STATS = {
+      man:     [F+1, F+2, 3, m(F-2,1), F+1, 1, F+11, m(F-2,1)+'M'],
+      sky:     [m(F-2,1), F+3, 4, m(F-3,1), F+2, 1, F+12, m(F-3,1)+'M Stun'],
+      land:    [F+4, m(F-2,1), 2, F+4, m(F-2,1), 1, F+8, (F+4)+'S'],
+      water_s: [F+2, F, 2, F, m(F-1,1), 1, F+9, F+'S Stun'],
+      air_e:   [m(F-2,1), F+3, 4, m(F-3,1), F+2, 1, F+12, 'As Powers'],
+      fire_e:  [F+1, F+2, 3, m(F-2,1), F+1, 1, F+11, m(F-2,1)+'M'],
+      earth_e: [F+4, m(F-2,1), 2, F+4, m(F-2,1), 3, F+8, (F+4)+'S, +1 Reach'],
+      water_e: [F+2, F, 2, F, F+1, 3, F+11, F+'S Stun']
+    };
+
+    var s = STATS[cat];
+    out.spirit_b = String(s[0]);
+    out.spirit_q = s[2] > 1 ? s[1]+'(x'+s[2]+')' : String(s[1]);
+    out.spirit_s = String(s[3]);
+    out.spirit_c = String(F);
+    out.spirit_i = String(F);
+    out.spirit_w = String(F);
+    out.spirit_e = '('+F+')A';
+    out.spirit_r = s[5] > 1 ? s[4]+'(x'+s[5]+')' : String(s[4]);
+    out.spirit_init = (F+20)+'+1D6 (Astral) / '+s[6]+'+1D6 (Physical)';
+    out.spirit_attack = s[7];
+
+    // Powers lookup
+    var POWERS = {
+      city:             'Accident, Concealment, Confusion, Fear, Guard, Materialization, Search',
+      field:            'Accident, Concealment, Guard, Materialization, Search',
+      hearth:           'Accident, Concealment, Confusion, Guard, Materialization, Search',
+      mist:             'Accident, Concealment, Confusion, Guard, Materialization, Movement',
+      storm:            'Concealment, Confusion, Fear, Materialization, Innate Spell (Lightning Bolt)',
+      wind:             'Accident, Confusion, Guard, Materialization, Movement, Search',
+      desert:           'Concealment, Guard, Materialization, Movement, Search',
+      forest_spirit:    'Accident, Concealment, Confusion, Fear, Guard, Materialization',
+      mountain:         'Accident, Concealment, Guard, Materialization, Movement, Search',
+      prairie:          'Accident, Concealment, Guard, Materialization, Movement, Search',
+      lake:             'Accident, Engulf, Fear, Guard, Materialization, Movement, Search',
+      river:            'Accident, Concealment, Engulf, Fear, Guard, Materialization, Movement, Search',
+      sea:              'Accident, Concealment, Confusion, Engulf, Fear, Guard, Materialization, Movement, Search',
+      swamp:            'Accident, Binding, Concealment, Confusion, Engulf, Fear, Guard, Materialization, Movement, Search',
+      air_elemental:    'Engulf, Materialization, Movement, Noxious Breath, Psychokinesis',
+      fire_elemental:   'Engulf, Flame Aura, Guard, Materialization, Innate Spell (Flamethrower)',
+      earth_elemental:  'Engulf, Materialization, Movement',
+      water_elemental:  'Engulf, Materialization, Movement'
+    };
+
+    var WEAKNESSES = {
+      air_elemental:   'Confined by airtight seals, Vulnerability (Earth)',
+      fire_elemental:  'Vulnerability (Water)',
+      earth_elemental: 'Vulnerability (Air)',
+      water_elemental: 'Vulnerability (Fire)'
+    };
+
+    out.spirit_powers = POWERS[type] || '';
+    out.spirit_weaknesses = WEAKNESSES[type] || 'None';
+    setAttrs(out);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// REGION 4 — Event-driven handlers (Sync to DB)
+// ═══════════════════════════════════════════════════════════
+
+on('clicked:btn_sync_db', function() {
+  setAttrs({ sync_status: 'Syncing\u2026' });
+
+  // Collect all scalar and repeating attrs needed for sync payload
+  var scalarFields = [
+    'campaign_db_id', 'char_db_id', 'char_sync_version',
+    'body_base', 'dex_base', 'str_base', 'cha_base', 'int_base', 'wil_base', 'hum_base', 'mag_base',
+    'body_mutations', 'dex_mutations', 'str_mutations', 'cha_mutations', 'int_mutations', 'wil_mutations', 'hum_mutations',
+    'body_magic', 'dex_magic', 'str_magic', 'cha_magic', 'int_magic', 'wil_magic', 'hum_magic',
+    'body_misc', 'dex_misc', 'str_misc', 'cha_misc', 'int_misc', 'wil_misc', 'hum_misc', 'mag_misc',
+    'body', 'dex', 'str', 'cha', 'int', 'wil', 'hum', 'mag',
+    'reaction_base', 'reaction_misc', 'reaction',
+    'pool_spell_base', 'pool_spell_misc', 'pool_spell',
+    'pool_combat_base', 'pool_combat_misc', 'pool_combat',
+    'pool_control_base', 'pool_control_misc', 'pool_control',
+    'pool_astral_base', 'pool_astral_misc', 'pool_astral',
+    'init_dice', 'init_reaction_mod', 'init_misc_mod', 'init_score',
+    'cm_physical_overflow', 'cm_tn_mod', 'cm_init_mod',
+    'cm_mental_l1','cm_mental_l2','cm_mental_m1','cm_mental_m2','cm_mental_m3',
+    'cm_mental_s1','cm_mental_s2','cm_mental_s3','cm_mental_s4','cm_mental_d',
+    'cm_stun_l1','cm_stun_l2','cm_stun_m1','cm_stun_m2','cm_stun_m3',
+    'cm_stun_s1','cm_stun_s2','cm_stun_s3','cm_stun_s4','cm_stun_d','cm_stun_u',
+    'cm_physical_l1','cm_physical_l2','cm_physical_m1','cm_physical_m2','cm_physical_m3',
+    'cm_physical_s1','cm_physical_s2','cm_physical_s3','cm_physical_s4','cm_physical_d','cm_physical_u',
+    'char_name', 'char_race_station', 'char_sex', 'char_age', 'char_description', 'char_notes',
+    'karma_good', 'karma_used', 'karma_total', 'karma_pool',
+    'ep_total', 'ep_max',
+    'armor_torso_name', 'armor_torso_piercing', 'armor_torso_slashing', 'armor_torso_impact',
+    'armor_legs_name', 'armor_legs_piercing', 'armor_legs_slashing', 'armor_legs_impact',
+    'armor_head_name', 'armor_head_piercing', 'armor_head_slashing', 'armor_head_impact',
+    'armor_total_piercing', 'armor_total_slashing', 'armor_total_impact',
+    'power_points_max', 'power_points_used', 'power_points_remaining',
+    'spells_sustained', 'sustained_tn_mod', 'tn_warning_level', 'essence_total',
+    'bio_q01', 'bio_q02', 'bio_q03', 'bio_q04', 'bio_q05', 'bio_q06', 'bio_q07', 'bio_q08',
+    'bio_q09', 'bio_q10', 'bio_q11', 'bio_q12', 'bio_q13', 'bio_q14', 'bio_q15', 'bio_q16',
+    'bio_q17', 'bio_q18', 'bio_q19', 'bio_q20',
+  ];
+
+  getAttrs(scalarFields, function(attrs) {
+    if (!attrs.campaign_db_id) {
+      setAttrs({ sync_status: 'Sync failed \u2014 no campaign ID set' });
+      return;
+    }
+
+    var syncVersionFrom = parseInt(attrs.char_sync_version, 10) || 0;
+    var scalars = {};
+    scalarFields.forEach(function(f) {
+      if (f !== 'campaign_db_id' && f !== 'char_db_id' && f !== 'char_sync_version') {
+        scalars[f] = attrs[f];
+      }
+    });
+
+    var payload = {
+      campaign_db_id:    attrs.campaign_db_id,
+      char_db_id:        attrs.char_db_id || null,
+      sync_version_from: syncVersionFrom,
+      scalars:           scalars,
+      repeating:         {}
+    };
+
+    // SYNC_PROXY_URL is '' during development — fill after CF Worker deployment
+    if (!SYNC_PROXY_URL) {
+      setAttrs({ sync_status: 'Sync skipped \u2014 no proxy URL configured' });
+      return;
+    }
+
+    fetch(SYNC_PROXY_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(response) {
+      setAttrs({
+        char_db_id:        attrs.char_db_id || response.char_db_id,
+        char_sync_version: response.sync_version.toString(),
+        sync_status:       'Synced \u2713 \u2014 ' + new Date().toLocaleString(),
+      });
+    })
+    .catch(function(err) {
+      console.error('Sync failed:', err);
+      setAttrs({ sync_status: 'Sync failed \u2014 check console' });
+    });
+  });
+});
+</script>
+
+
+<div class="sheet-hidden-infrastructure">
+  <input type="hidden" name="attr_char_db_id" value="">
+  <input type="hidden" name="attr_char_sync_version" value="0">
+  <input type="hidden" name="attr_campaign_db_id" value="">
+</div>
+
+<input type="radio" class="sheet-tab-radio" name="sheet-tab-nav" id="sheet-tab-core" checked>
+<label for="sheet-tab-core" class="sheet-tab-label">Core</label>
+<input type="radio" class="sheet-tab-radio" name="sheet-tab-nav" id="sheet-tab-skills">
+<label for="sheet-tab-skills" class="sheet-tab-label">Skills</label>
+<input type="radio" class="sheet-tab-radio" name="sheet-tab-nav" id="sheet-tab-magic">
+<label for="sheet-tab-magic" class="sheet-tab-label">Magic</label>
+<input type="radio" class="sheet-tab-radio" name="sheet-tab-nav" id="sheet-tab-gear">
+<label for="sheet-tab-gear" class="sheet-tab-label">Gear</label>
+<input type="radio" class="sheet-tab-radio" name="sheet-tab-nav" id="sheet-tab-bio">
+<label for="sheet-tab-bio" class="sheet-tab-label">Bio</label>
+
+<div class="sheet-compact-target">
+  <div class="sheet-tab-panel sheet-tab-panel-core">
+    <div class="sheet-header-strip">
+      <input type="text" name="attr_sync_status" value="Never synced" readonly class="sheet-sync-status">
+      <button type="action" name="act_btn_sync_db" class="sheet-btn-sync">Sync to DB</button>
+    </div>
+
+    <!-- Region 2: Identity Row -->
+    <div class="sheet-identity-row">
+      <input type="text" name="attr_char_name" placeholder="Character Name" class="sheet-char-name">
+      <input type="text" name="attr_char_race_station" placeholder="Race / Station">
+      <input type="text" name="attr_char_sex" placeholder="Sex">
+      <input type="text" name="attr_char_age" placeholder="Age">
+    </div>
+
+    <div class="sheet-box-condition">
+      <h3 class="sheet-section-title">Condition Monitor</h3>
+      <table class="sheet-condition-table">
+        <thead>
+          <tr>
+            <th class="sheet-cm-th-track" rowspan="2">Track</th>
+            <th class="sheet-cm-th-light" colspan="2">Light (+1)</th>
+            <th class="sheet-cm-th-mod" colspan="3">Moderate (+2)</th>
+            <th class="sheet-cm-th-serious" colspan="4">Serious (+3)</th>
+            <th class="sheet-cm-th-deadly" rowspan="2">Deadly</th>
+            <th class="sheet-cm-th-down" rowspan="2">Down</th>
+          </tr>
+          <tr>
+            <th class="sheet-cm-th-light">1</th><th class="sheet-cm-th-light">2</th>
+            <th class="sheet-cm-th-mod">1</th><th class="sheet-cm-th-mod">2</th><th class="sheet-cm-th-mod">3</th>
+            <th class="sheet-cm-th-serious">1</th><th class="sheet-cm-th-serious">2</th><th class="sheet-cm-th-serious">3</th><th class="sheet-cm-th-serious">4</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sheet-cm-label">Mental</td>
+            <td><input type="checkbox" name="attr_cm_mental_l1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_l2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_m1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_m2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_m3" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_s1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_s2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_s3" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_s4" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_mental_d"  value="1"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="sheet-cm-label">Stun</td>
+            <td><input type="checkbox" name="attr_cm_stun_l1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_l2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_m1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_m2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_m3" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_s1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_s2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_s3" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_s4" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_d"  value="1"></td>
+            <td><input type="checkbox" name="attr_cm_stun_u"  value="1"></td>
+          </tr>
+          <tr>
+            <td class="sheet-cm-label">Physical</td>
+            <td><input type="checkbox" name="attr_cm_physical_l1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_l2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_m1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_m2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_m3" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_s1" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_s2" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_s3" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_s4" value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_d"  value="1"></td>
+            <td><input type="checkbox" name="attr_cm_physical_u"  value="1"></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="sheet-cm-overflow">
+        <label>Physical Overflow:</label>
+        <input type="number" name="attr_cm_physical_overflow" value="0">
+      </div>
+    </div>
+
+    <div class="sheet-penalty-strip">
+      <label>Wound TN Mod:</label>
+      <input type="number" name="attr_cm_tn_mod" value="0" readonly class="sheet-penalty-display">
+      <label>Initiative Mod:</label>
+      <input type="number" name="attr_cm_init_mod" value="0" readonly class="sheet-penalty-display">
+    </div>
+
+    <h3 class="sheet-section-title">Attributes</h3>
+    <table class="sheet-box-attribute">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Base</th>
+          <th>Mutations</th>
+          <th>Magic</th>
+          <th>Misc</th>
+          <th>Total</th>
+          <th>Roll</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>BODY</td>
+          <td><input type="number" name="attr_body_base" value="0"></td>
+          <td><input type="number" name="attr_body_mutations" value="0"></td>
+          <td><input type="number" name="attr_body_magic" value="0"></td>
+          <td><input type="number" name="attr_body_misc" value="0"></td>
+          <td><input type="number" name="attr_body" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_body" value="&{template:skill} {{charname=@{char_name}}} {{rollname=BODY}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{body}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+        <tr>
+          <td>DEX</td>
+          <td><input type="number" name="attr_dex_base" value="0"></td>
+          <td><input type="number" name="attr_dex_mutations" value="0"></td>
+          <td><input type="number" name="attr_dex_magic" value="0"></td>
+          <td><input type="number" name="attr_dex_misc" value="0"></td>
+          <td><input type="number" name="attr_dex" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_dex" value="&{template:skill} {{charname=@{char_name}}} {{rollname=DEX}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{dex}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+        <tr>
+          <td>STR</td>
+          <td><input type="number" name="attr_str_base" value="0"></td>
+          <td><input type="number" name="attr_str_mutations" value="0"></td>
+          <td><input type="number" name="attr_str_magic" value="0"></td>
+          <td><input type="number" name="attr_str_misc" value="0"></td>
+          <td><input type="number" name="attr_str" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_str" value="&{template:skill} {{charname=@{char_name}}} {{rollname=STR}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{str}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+        <tr>
+          <td>CHA</td>
+          <td><input type="number" name="attr_cha_base" value="0"></td>
+          <td><input type="number" name="attr_cha_mutations" value="0"></td>
+          <td><input type="number" name="attr_cha_magic" value="0"></td>
+          <td><input type="number" name="attr_cha_misc" value="0"></td>
+          <td><input type="number" name="attr_cha" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_cha" value="&{template:skill} {{charname=@{char_name}}} {{rollname=CHA}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{cha}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+        <tr>
+          <td>INT</td>
+          <td><input type="number" name="attr_int_base" value="0"></td>
+          <td><input type="number" name="attr_int_mutations" value="0"></td>
+          <td><input type="number" name="attr_int_magic" value="0"></td>
+          <td><input type="number" name="attr_int_misc" value="0"></td>
+          <td><input type="number" name="attr_int" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_int" value="&{template:skill} {{charname=@{char_name}}} {{rollname=INT}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{int}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+        <tr>
+          <td>WIL</td>
+          <td><input type="number" name="attr_wil_base" value="0"></td>
+          <td><input type="number" name="attr_wil_mutations" value="0"></td>
+          <td><input type="number" name="attr_wil_magic" value="0"></td>
+          <td><input type="number" name="attr_wil_misc" value="0"></td>
+          <td><input type="number" name="attr_wil" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_wil" value="&{template:skill} {{charname=@{char_name}}} {{rollname=WIL}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{wil}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+        <tr>
+          <td>HUM</td>
+          <td><input type="number" name="attr_hum_base" value="0"></td>
+          <td><input type="number" name="attr_hum_mutations" value="0"></td>
+          <td><input type="number" name="attr_hum_magic" value="0"></td>
+          <td><input type="number" name="attr_hum_misc" value="0"></td>
+          <td><input type="number" name="attr_hum" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_hum" value="&{template:skill} {{charname=@{char_name}}} {{rollname=HUM}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{hum}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+        <tr>
+          <td>MAG</td>
+          <td><input type="number" name="attr_mag_base" value="0"></td>
+          <td></td>
+          <td></td>
+          <td><input type="number" name="attr_mag_misc" value="0"></td>
+          <td><input type="number" name="attr_mag" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_mag" value="&{template:skill} {{charname=@{char_name}}} {{rollname=MAG}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{mag}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+        <tr>
+          <td>REACTION</td>
+          <td class="sheet-formula-hint">(INT+DEX)/2</td>
+          <td></td>
+          <td></td>
+          <td><input type="number" name="attr_reaction_misc" value="0"></td>
+          <td><input type="number" name="attr_reaction" value="0" readonly></td>
+          <td><button type="roll" name="roll_btn_roll_reaction" value="&{template:skill} {{charname=@{char_name}}} {{rollname=REACTION}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{@{reaction}d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}">&#x1F3B2;</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <input type="hidden" name="attr_reaction_base" value="0">
+
+    <div class="sheet-box-initiative">
+      <span class="sheet-init-title">INITIATIVE</span>
+      <label>Dice:</label>
+      <input type="number" name="attr_init_dice" value="1">
+      <label>Reac. Mod:</label>
+      <input type="number" name="attr_init_reaction_mod" value="0">
+      <label>Misc:</label>
+      <input type="number" name="attr_init_misc_mod" value="0">
+      <label>Score:</label>
+      <input type="number" name="attr_init_score" value="0" readonly class="sheet-init-score">
+    </div>
+    <button type="roll" name="roll_btn_init_roll" class="sheet-btn-init-roll" value="&{template:init} {{charname=@{char_name}}} {{rollname=Initiative}} {{result=[[@{init_dice}d6 + @{init_score}]]}}">Roll Initiative</button>
+
+    <!-- Region 6: Dice Pools Table -->
+    <input type="hidden" name="attr_pool_spell_base" value="0">
+    <input type="hidden" name="attr_pool_combat_base" value="0">
+    <input type="hidden" name="attr_pool_control_base" value="0">
+    <input type="hidden" name="attr_pool_astral_base" value="0">
+
+    <h3 class="sheet-section-title">Dice Pools</h3>
+    <div class="sheet-box-dice-pools">
+    <table class="sheet-dice-pools-table">
+      <thead>
+        <tr>
+          <th>Pool</th>
+          <th>Formula</th>
+          <th>Misc</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Spell Pool</td>
+          <td class="sheet-formula-hint">(CHA+INT+WIL)/2</td>
+          <td><input type="number" name="attr_pool_spell_misc" value="0"></td>
+          <td><input type="number" name="attr_pool_spell" value="0" readonly></td>
+        </tr>
+        <tr>
+          <td>Combat Pool</td>
+          <td class="sheet-formula-hint">(DEX+INT+WIL)/2</td>
+          <td><input type="number" name="attr_pool_combat_misc" value="0"></td>
+          <td><input type="number" name="attr_pool_combat" value="0" readonly></td>
+        </tr>
+        <tr>
+          <td>Control Pool</td>
+          <td class="sheet-formula-hint">= Reaction</td>
+          <td><input type="number" name="attr_pool_control_misc" value="0"></td>
+          <td><input type="number" name="attr_pool_control" value="0" readonly></td>
+        </tr>
+        <tr>
+          <td>Astral Pool</td>
+          <td class="sheet-formula-hint">(INT+WIL+MAG)/3</td>
+          <td><input type="number" name="attr_pool_astral_misc" value="0"></td>
+          <td><input type="number" name="attr_pool_astral" value="0" readonly></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- Region 7: Karma Row -->
+    <h3 class="sheet-section-title">Karma</h3>
+    <div class="sheet-karma-row">
+      <span class="sheet-karma-title">KARMA</span>
+      <label>Good:</label>
+      <input type="number" name="attr_karma_good" value="0">
+      <label>Used:</label>
+      <input type="number" name="attr_karma_used" value="0">
+      <label>Total:</label>
+      <input type="number" name="attr_karma_total" value="0" readonly class="sheet-karma-total">
+      <label>Pool:</label>
+      <input type="number" name="attr_karma_pool" value="0">
+    </div>
+
+  </div>
+
+  <div class="sheet-tab-panel sheet-tab-panel-skills">
+    <!-- Region 1: Skills Section -->
+    <h3 class="sheet-section-title">Skills</h3>
+    <div class="sheet-section-skills">
+      <!-- Column header row -->
+      <div class="sheet-skills-header">
+        <span class="sheet-hdr-skill-name">Skill Name</span>
+        <span class="sheet-hdr-skill-linked">Linked</span>
+        <span class="sheet-hdr-skill-general">Category</span>
+        <span class="sheet-hdr-skill-spec">Spec</span>
+        <span class="sheet-hdr-skill-base">Base</span>
+        <span class="sheet-hdr-skill-foci">Foci</span>
+        <span class="sheet-hdr-skill-misc">Misc</span>
+        <span class="sheet-hdr-skill-total">Total</span>
+        <span class="sheet-hdr-skill-roll">Roll</span>
+        <span class="sheet-hdr-spacer"></span>
+      </div>
+      <fieldset class="repeating_skills">
+        <input type="text" name="attr_skill_name" placeholder="Skill Name" class="sheet-skill-name">
+        <select name="attr_skill_linked_attr" class="sheet-skill-linked">
+          <option value="body">BODY</option>
+          <option value="dex">DEX</option>
+          <option value="str">STR</option>
+          <option value="cha">CHA</option>
+          <option value="int">INT</option>
+          <option value="wil">WIL</option>
+          <option value="hum">HUM</option>
+          <option value="mag">MAG</option>
+          <option value="reaction">REACTION</option>
+        </select>
+        <select name="attr_skill_general" class="sheet-skill-general">
+          <option value="Active">Active</option>
+          <option value="Knowledge">Knowledge</option>
+          <option value="Language">Language</option>
+        </select>
+        <input type="checkbox" name="attr_skill_spec" value="1" class="sheet-skill-spec">
+        <input type="number" name="attr_skill_base" value="0" class="sheet-skill-base">
+        <input type="number" name="attr_skill_foci" value="0" class="sheet-skill-foci">
+        <input type="number" name="attr_skill_misc" value="0" class="sheet-skill-misc">
+        <input type="number" name="attr_skill_total" value="0" readonly class="sheet-skill-total">
+        <span class="sheet-skill-roll-group">
+          <button type="roll" name="roll_btn_skill_blind" value="&{template:skill} {{charname=@{char_name}}} {{rollname=@{skill_name}}} {{linked_attr=@{skill_linked_attr}}} {{dice=[[{(@{skill_total}+?{Pool dice to add|0})d6!!}]]}}" class="sheet-skill-roll-blind" title="Roll blind (TN unknown)">&#x1F3B2;</button>
+          <button type="roll" name="roll_btn_skill_tn" value="&{template:skill} {{charname=@{char_name}}} {{rollname=@{skill_name}}} {{linked_attr=@{skill_linked_attr}}} {{tn=[[?{Target Number|4}+@{cm_tn_mod}]]}} {{successes=[[{(@{skill_total}+?{Pool dice to add|0})d6!!}>[[?{Target Number|4}+@{cm_tn_mod}]]]]}}" class="sheet-skill-roll-tn" title="Roll with Target Number">&#x1F3AF;</button>
+        </span>
+      </fieldset>
+    </div>
+
+    <!-- Region 2: Mutations Section -->
+    <h3 class="sheet-section-title">Mutations</h3>
+    <div class="sheet-section-mutations">
+      <div class="sheet-mutations-summary">
+        <span class="sheet-summary-title">ESSENCE</span>
+        <label>Total:</label>
+        <input type="number" name="attr_essence_total" value="6" readonly class="sheet-computed-badge">
+      </div>
+      <!-- Column header row -->
+      <div class="sheet-mutations-header">
+        <span class="sheet-hdr-mutation-name">Name</span>
+        <span class="sheet-hdr-mutation-level">Level</span>
+        <span class="sheet-hdr-mutation-essence">Essence</span>
+        <span class="sheet-hdr-mutation-bp">BP</span>
+        <span class="sheet-hdr-mutation-effect">Effect</span>
+        <span class="sheet-hdr-spacer"></span>
+      </div>
+      <fieldset class="repeating_mutations">
+        <input type="text" name="attr_mutation_name" placeholder="Mutation Name" class="sheet-mutation-name">
+        <input type="number" name="attr_mutation_level" value="0" class="sheet-mutation-level">
+        <input type="number" name="attr_mutation_essence" value="0" class="sheet-mutation-essence">
+        <input type="number" name="attr_mutation_bp_cost" value="0" class="sheet-mutation-bp">
+        <input type="text" name="attr_mutation_effect" placeholder="Effect" class="sheet-mutation-effect">
+      </fieldset>
+    </div>
+
+    <!-- Region 3: Adept Powers Section -->
+    <h3 class="sheet-section-title">Adept Powers</h3>
+    <div class="sheet-section-adept-powers">
+      <div class="sheet-pp-summary">
+        <span class="sheet-summary-title">POWER POINTS</span>
+        <label>Used:</label>
+        <input type="number" name="attr_power_points_used" value="0" readonly class="sheet-computed-badge">
+        <label>Max:</label>
+        <input type="number" name="attr_power_points_max" value="0" readonly class="sheet-computed-badge">
+        <label>Remaining:</label>
+        <input type="number" name="attr_power_points_remaining" value="0" readonly class="sheet-computed-badge">
+      </div>
+      <!-- Column header row -->
+      <div class="sheet-powers-header">
+        <span class="sheet-hdr-power-name">Name</span>
+        <span class="sheet-hdr-power-level">Level</span>
+        <span class="sheet-hdr-power-cost">PP Cost</span>
+        <span class="sheet-hdr-power-effect">Effect</span>
+        <span class="sheet-hdr-spacer"></span>
+      </div>
+      <fieldset class="repeating_adept_powers">
+        <input type="text" name="attr_power_name" placeholder="Power Name" class="sheet-power-name">
+        <input type="number" name="attr_power_level" value="0" class="sheet-power-level">
+        <input type="text" name="attr_power_pp_cost" placeholder="PP Cost" class="sheet-power-pp-cost">
+        <input type="number" name="attr_power_pp_cost_value" value="0" class="sheet-hidden-numeric">
+        <input type="text" name="attr_power_effect" placeholder="Effect" class="sheet-power-effect">
+      </fieldset>
+    </div>
+  </div>
+  <div class="sheet-tab-panel sheet-tab-panel-magic">
+    <!-- Region 1: Magic Summary Strip -->
+    <h3 class="sheet-section-title">Magic Overview</h3>
+    <div class="sheet-magic-summary">
+      <span class="sheet-summary-title">MAGIC</span>
+      <div class="sheet-magic-cell">
+        <label>Rating:</label>
+        <input type="number" name="attr_mag" value="0" readonly class="sheet-computed-badge">
+      </div>
+      <div class="sheet-magic-cell">
+        <label>Casting Dice:</label>
+        <input type="number" name="attr_casting_dice" value="0" class="sheet-magic-sustained-input">
+      </div>
+      <div class="sheet-magic-cell">
+        <label>Spell Pool:</label>
+        <input type="number" name="attr_pool_spell" value="0" readonly class="sheet-computed-badge">
+      </div>
+      <div class="sheet-magic-cell">
+        <label>Remaining:</label>
+        <input type="number" name="attr_pool_spell_remaining" value="0" class="sheet-magic-sustained-input">
+      </div>
+      <div class="sheet-magic-cell">
+        <label>Sustained:</label>
+        <input type="number" name="attr_spells_sustained" value="0" class="sheet-magic-sustained-input">
+      </div>
+      <div class="sheet-magic-cell">
+        <label>TN Mod:</label>
+        <input type="number" name="attr_sustained_tn_mod" value="0" readonly class="sheet-computed-badge">
+      </div>
+      <input type="hidden" name="attr_tn_warning_level" value="0">
+      <span class="sheet-tn-warning">&#x26A0; Sustaining penalty active</span>
+    </div>
+
+    <!-- Region 2: Spells Section -->
+    <h3 class="sheet-section-title">Spells</h3>
+    <div class="sheet-section-spells">
+      <div class="sheet-spells-header">
+        <span class="sheet-hdr-spell-name">Spell Name</span>
+        <span class="sheet-hdr-spell-force">Force</span>
+        <span class="sheet-hdr-spell-drain">Drain Code</span>
+        <span class="sheet-hdr-spell-cast">Cast</span>
+        <span class="sheet-hdr-spell-resist">Drain R.</span>
+        <span class="sheet-hdr-spacer"></span>
+      </div>
+      <fieldset class="repeating_spells">
+        <input type="text" name="attr_spell_name" placeholder="Spell Name" class="sheet-spell-name">
+        <input type="number" name="attr_spell_force" value="0" class="sheet-spell-force">
+        <input type="text" name="attr_spell_drain" placeholder="e.g. (F/2)+1 M" class="sheet-spell-drain">
+        <button type="roll" name="roll_btn_cast_spell" class="sheet-btn-cast" value="&{template:spell} {{charname=@{char_name}}} {{rollname=Cast: @{spell_name}}} {{spell_name=@{spell_name}}} {{force=@{spell_force}}} {{drain_code=@{spell_drain}}} {{tn=[[?{Target Number|@{spell_force}}+@{cm_tn_mod}+@{sustained_tn_mod}]]}} {{successes=[[{(@{casting_dice}+?{Spell Pool dice|@{pool_spell_remaining}})d6!!}>[[?{Target Number|@{spell_force}}+@{cm_tn_mod}+@{sustained_tn_mod}]]]]}}">Cast</button>
+        <button type="roll" name="roll_btn_drain_resist" class="sheet-btn-drain" value="&{template:spell} {{charname=@{char_name}}} {{rollname=Drain: @{spell_name}}} {{spell_name=@{spell_name}}} {{drain_code=@{spell_drain}}} {{force=@{spell_force}}} {{tn=[[?{Drain TN}+@{cm_tn_mod}]]}} {{successes=[[{(@{wil}+?{Remaining Spell Pool|@{pool_spell_remaining}})d6!!}>[[?{Drain TN}+@{cm_tn_mod}]]]]}}">Drain</button>
+      </fieldset>
+    </div>
+
+    <!-- Region 3: Foci Section -->
+    <h3 class="sheet-section-title">Foci</h3>
+    <div class="sheet-section-foci">
+      <div class="sheet-foci-header">
+        <span class="sheet-hdr-focus-name">Name</span>
+        <span class="sheet-hdr-focus-type">Type</span>
+        <span class="sheet-hdr-focus-force">Force</span>
+        <span class="sheet-hdr-focus-bonded">Bond</span>
+        <span class="sheet-hdr-focus-notes">Notes</span>
+        <span class="sheet-hdr-spacer"></span>
+      </div>
+      <fieldset class="repeating_foci">
+        <input type="text" name="attr_focus_name" placeholder="Focus Name" class="sheet-focus-name">
+        <select name="attr_focus_type" class="sheet-focus-type">
+          <option value="Expendable">Expendable</option>
+          <option value="Specific Spell">Specific Spell</option>
+          <option value="Spell Category">Spell Category</option>
+          <option value="Spirit">Spirit</option>
+          <option value="Power">Power</option>
+          <option value="Sustaining">Sustaining</option>
+          <option value="Weapon">Weapon</option>
+        </select>
+        <input type="number" name="attr_focus_force" value="0" class="sheet-focus-force">
+        <input type="checkbox" name="attr_focus_bonded" value="1" class="sheet-focus-bonded">
+        <input type="text" name="attr_focus_notes" placeholder="Notes (e.g. sustaining Improved Invisibility)" class="sheet-focus-notes">
+      </fieldset>
+    </div>
+
+    <!-- Region 4: Casting Reference Card -->
+    <div class="sheet-casting-reference">
+      <h4>Casting Quick Reference</h4>
+      <ul>
+        <li><strong>Sorcery Test:</strong> Sorcery skill + Spell Pool dice vs Target Number</li>
+        <li><strong>Default TN:</strong> Spell Force (or target's attribute — varies by spell)</li>
+        <li><strong>Drain Resist:</strong> Willpower + remaining Spell Pool dice vs Drain TN</li>
+        <li><strong>Drain TN:</strong> Derived from Drain Code (e.g. M+1 = Force/2 +1, S = Force, etc.)</li>
+        <li><strong>Sustaining Penalty:</strong> +2 TN to ALL actions per spell sustained</li>
+        <li><strong>Foci:</strong> Sustaining focus removes the +2 TN penalty for that spell</li>
+      </ul>
+    </div>
+
+    <!-- Region 5: Spirit Calculator -->
+    <h3 class="sheet-section-title">Spirit Calculator</h3>
+    <div class="sheet-section-spirit-calc">
+      <div class="sheet-spirit-controls">
+        <label>Type:</label>
+        <select name="attr_spirit_type" class="sheet-spirit-type-select">
+          <option value="">-- Select --</option>
+          <optgroup label="Spirits of Man">
+            <option value="city">City Spirit</option>
+            <option value="field">Field Spirit</option>
+            <option value="hearth">Hearth Spirit</option>
+          </optgroup>
+          <optgroup label="Spirits of the Sky">
+            <option value="mist">Mist Spirit</option>
+            <option value="storm">Storm Spirit</option>
+            <option value="wind">Wind Spirit</option>
+          </optgroup>
+          <optgroup label="Spirits of the Land">
+            <option value="desert">Desert Spirit</option>
+            <option value="forest_spirit">Forest Spirit</option>
+            <option value="mountain">Mountain Spirit</option>
+            <option value="prairie">Prairie Spirit</option>
+          </optgroup>
+          <optgroup label="Spirits of the Water">
+            <option value="lake">Lake Spirit</option>
+            <option value="river">River Spirit</option>
+            <option value="sea">Sea Spirit</option>
+            <option value="swamp">Swamp Spirit</option>
+          </optgroup>
+          <optgroup label="Elementals">
+            <option value="air_elemental">Air Elemental</option>
+            <option value="fire_elemental">Fire Elemental</option>
+            <option value="earth_elemental">Earth Elemental</option>
+            <option value="water_elemental">Water Elemental</option>
+          </optgroup>
+        </select>
+        <label>Force:</label>
+        <input type="number" name="attr_spirit_force" value="1" min="1" class="sheet-spirit-force-input">
+      </div>
+      <div class="sheet-spirit-stats">
+        <div class="sheet-spirit-stat"><label>B</label><input type="text" name="attr_spirit_b" value="" readonly></div>
+        <div class="sheet-spirit-stat"><label>Q</label><input type="text" name="attr_spirit_q" value="" readonly></div>
+        <div class="sheet-spirit-stat"><label>S</label><input type="text" name="attr_spirit_s" value="" readonly></div>
+        <div class="sheet-spirit-stat"><label>C</label><input type="text" name="attr_spirit_c" value="" readonly></div>
+        <div class="sheet-spirit-stat"><label>I</label><input type="text" name="attr_spirit_i" value="" readonly></div>
+        <div class="sheet-spirit-stat"><label>W</label><input type="text" name="attr_spirit_w" value="" readonly></div>
+        <div class="sheet-spirit-stat"><label>E</label><input type="text" name="attr_spirit_e" value="" readonly></div>
+        <div class="sheet-spirit-stat"><label>R</label><input type="text" name="attr_spirit_r" value="" readonly></div>
+      </div>
+      <div class="sheet-spirit-combat">
+        <div class="sheet-spirit-field">
+          <label>Initiative:</label>
+          <input type="text" name="attr_spirit_init" value="" readonly class="sheet-spirit-wide-display">
+        </div>
+        <div class="sheet-spirit-field">
+          <label>Attack:</label>
+          <input type="text" name="attr_spirit_attack" value="" readonly class="sheet-spirit-wide-display">
+        </div>
+      </div>
+      <div class="sheet-spirit-info">
+        <label>Powers:</label>
+        <textarea name="attr_spirit_powers" readonly class="sheet-spirit-textarea"></textarea>
+        <label>Weaknesses:</label>
+        <textarea name="attr_spirit_weaknesses" readonly class="sheet-spirit-textarea"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-tab-panel sheet-tab-panel-gear">
+    <!-- Region: Armor Panel -->
+    <h3 class="sheet-section-title">Armor</h3>
+    <div class="sheet-box-armor">
+    <table class="sheet-armor-table">
+      <thead>
+        <tr>
+          <th>—</th>
+          <th>Torso</th>
+          <th>Legs</th>
+          <th>Head</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Name</td>
+          <td><input type="text" name="attr_armor_torso_name" value=""></td>
+          <td><input type="text" name="attr_armor_legs_name" value=""></td>
+          <td><input type="text" name="attr_armor_head_name" value=""></td>
+        </tr>
+        <tr>
+          <td>Piercing</td>
+          <td><input type="number" name="attr_armor_torso_piercing" value="0"></td>
+          <td><input type="number" name="attr_armor_legs_piercing" value="0"></td>
+          <td><input type="number" name="attr_armor_head_piercing" value="0"></td>
+        </tr>
+        <tr>
+          <td>Slashing</td>
+          <td><input type="number" name="attr_armor_torso_slashing" value="0"></td>
+          <td><input type="number" name="attr_armor_legs_slashing" value="0"></td>
+          <td><input type="number" name="attr_armor_head_slashing" value="0"></td>
+        </tr>
+        <tr>
+          <td>Impact</td>
+          <td><input type="number" name="attr_armor_torso_impact" value="0"></td>
+          <td><input type="number" name="attr_armor_legs_impact" value="0"></td>
+          <td><input type="number" name="attr_armor_head_impact" value="0"></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td><input type="number" name="attr_armor_total_piercing" value="0" readonly></td>
+          <td><input type="number" name="attr_armor_total_slashing" value="0" readonly></td>
+          <td><input type="number" name="attr_armor_total_impact" value="0" readonly></td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+
+    <!-- Region: Combat Buttons -->
+    <div class="sheet-combat-panel">
+      <h3 class="sheet-section-title">Combat</h3>
+      <div class="sheet-combat-buttons">
+        <button type="roll" name="roll_btn_dodge" value="&{template:skill} {{charname=@{char_name}}} {{rollname=Dodge}} {{tn=[[4+@{cm_tn_mod}]]}} {{successes=[[{?{Combat Pool dice for dodge|0}d6!!}>[[4+@{cm_tn_mod}]]]]}}">Dodge</button>
+        <button type="roll" name="roll_btn_damage_resist_body" value="&{template:skill} {{charname=@{char_name}}} {{rollname=Resist Damage (Body)}} {{tn=[[?{TN (Power - Armor)|0}+@{cm_tn_mod}]]}} {{successes=[[{(@{body}+?{Combat Pool dice|0})d6!!}>[[?{TN (Power - Armor)|0}+@{cm_tn_mod}]]]]}}">Resist Damage (Body)</button>
+      </div>
+    </div>
+
+    <!-- Region: EP Tracker -->
+    <h3 class="sheet-section-title">Encumbrance</h3>
+    <div class="sheet-ep-tracker">
+      <span class="sheet-ep-title">EP</span>
+      <label>Used:</label>
+      <input type="number" name="attr_ep_total" value="0" readonly class="sheet-computed-badge">
+      <label>Max:</label>
+      <input type="number" name="attr_ep_max" value="0" readonly class="sheet-computed-badge">
+      <span class="sheet-formula-hint">max(STR,BOD)×4 + ½min(STR,BOD)</span>
+    </div>
+
+    <!-- Region: Weapons Section -->
+    <h3 class="sheet-section-title">Weapons</h3>
+    <div class="sheet-section-weapons">
+      <div class="sheet-weapons-header">
+        <span class="sheet-hdr-weapon-name">Name</span>
+        <span class="sheet-hdr-weapon-type">Type</span>
+        <span class="sheet-hdr-weapon-mods">Mods</span>
+        <span class="sheet-hdr-weapon-power">Pwr</span>
+        <span class="sheet-hdr-weapon-damage">Dmg</span>
+        <span class="sheet-hdr-weapon-conceal">Con</span>
+        <span class="sheet-hdr-weapon-reach">Rch</span>
+        <span class="sheet-hdr-weapon-ep">EP</span>
+        <span class="sheet-hdr-weapon-range">S / M / L / X</span>
+        <span class="sheet-hdr-weapon-roll">Roll</span>
+        <span class="sheet-hdr-spacer"></span>
+      </div>
+      <fieldset class="repeating_weapons">
+        <input type="text" class="sheet-weapon-name" name="attr_weapon_name" placeholder="Weapon Name">
+        <select class="sheet-weapon-type" name="attr_weapon_type">
+          <option value="Edged">Edged</option>
+          <option value="Club">Club</option>
+          <option value="Polearm">Polearm</option>
+          <option value="Unarmed">Unarmed</option>
+          <option value="Bow">Bow</option>
+          <option value="Crossbow">Crossbow</option>
+          <option value="Thrown">Thrown</option>
+        </select>
+        <input type="text" class="sheet-weapon-modifiers" name="attr_weapon_modifiers" placeholder="Mods">
+        <input type="number" class="sheet-weapon-power" name="attr_weapon_power" value="0">
+        <input type="text" class="sheet-weapon-damage" name="attr_weapon_damage" placeholder="Dmg Code">
+        <input type="number" class="sheet-weapon-conceal" name="attr_weapon_conceal" value="0">
+        <input type="number" class="sheet-weapon-reach" name="attr_weapon_reach" value="0">
+        <input type="number" class="sheet-weapon-ep" name="attr_weapon_ep" value="0">
+        <div class="sheet-range-bands">
+          <input type="text" class="sheet-range-short" name="attr_weapon_range_short" placeholder="S">
+          <input type="text" class="sheet-range-medium" name="attr_weapon_range_medium" placeholder="M">
+          <input type="text" class="sheet-range-long" name="attr_weapon_range_long" placeholder="L">
+          <input type="text" class="sheet-range-extreme" name="attr_weapon_range_extreme" placeholder="X">
+        </div>
+        <button type="roll" class="sheet-btn-attack" name="roll_btn_attack_ranged" value="&{template:attack} {{charname=@{char_name}}} {{rollname=Ranged: @{weapon_name}}} {{weapon_name=@{weapon_name}}} {{damage_code=@{weapon_damage}}} {{power=@{weapon_power}}} {{range_band=?{Range Band|Short}}} {{tn=[[?{Range TN|4}+@{cm_tn_mod}]]}} {{successes=[[{(?{Skill dice|0}+?{Combat Pool dice|0})d6!!}>[[?{Range TN|4}+@{cm_tn_mod}]]]]}}">Rng</button>
+        <button type="roll" class="sheet-btn-attack" name="roll_btn_attack_melee" value="&{template:attack} {{charname=@{char_name}}} {{rollname=Melee: @{weapon_name}}} {{weapon_name=@{weapon_name}}} {{damage_code=@{weapon_damage}}} {{power=@{weapon_power}}} {{reach=@{weapon_reach}}} {{tn=[[?{TN|4}+@{cm_tn_mod}]]}} {{successes=[[{(?{Skill dice|0}+?{Combat Pool dice|0})d6!!}>[[?{TN|4}+@{cm_tn_mod}]]]]}}">Mel</button>
+      </fieldset>
+    </div>
+
+    <!-- Region: Equipment Section -->
+    <h3 class="sheet-section-title">Equipment</h3>
+    <div class="sheet-section-equipment">
+      <div class="sheet-equipment-header">
+        <span class="sheet-hdr-equip-name">Name</span>
+        <span class="sheet-hdr-equip-desc">Description</span>
+        <span class="sheet-hdr-equip-ep">EP</span>
+        <span class="sheet-hdr-spacer"></span>
+      </div>
+      <fieldset class="repeating_equipment">
+        <input type="text" class="sheet-equip-name" name="attr_equip_name" placeholder="Item Name">
+        <input type="text" class="sheet-equip-desc" name="attr_equip_description" placeholder="Description">
+        <input type="number" class="sheet-equip-ep" name="attr_equip_ep" value="0">
+      </fieldset>
+    </div>
+
+    <!-- Region: Contacts Section -->
+    <h3 class="sheet-section-title">Contacts</h3>
+    <div class="sheet-section-contacts">
+      <div class="sheet-contacts-header">
+        <span class="sheet-hdr-contact-name">Name</span>
+        <span class="sheet-hdr-contact-info">Info</span>
+        <span class="sheet-hdr-contact-level">Level</span>
+        <span class="sheet-hdr-spacer"></span>
+      </div>
+      <fieldset class="repeating_contacts">
+        <input type="text" class="sheet-contact-name" name="attr_contact_name" placeholder="Contact Name">
+        <input type="text" class="sheet-contact-info" name="attr_contact_info" placeholder="Info / Notes">
+        <select class="sheet-contact-level" name="attr_contact_level">
+          <option value="1-Contact">1 — Contact</option>
+          <option value="2-Buddy">2 — Buddy</option>
+          <option value="3-Friend">3 — Friend</option>
+        </select>
+      </fieldset>
+    </div>
+  </div>
+
+  <div class="sheet-tab-panel sheet-tab-panel-bio">
+    <div class="sheet-bio-section">
+      <label>Description</label>
+      <textarea name="attr_char_description" rows="6"></textarea>
+      <label>Notes</label>
+      <textarea name="attr_char_notes" rows="6"></textarea>
+
+      <label>Q1: Who is your biggest rival and why?</label>
+      <textarea name="attr_bio_q01" rows="3"></textarea>
+      <label>Q2: Who or what do you despise?</label>
+      <textarea name="attr_bio_q02" rows="3"></textarea>
+      <label>Q3: Who looks up to you and why?</label>
+      <textarea name="attr_bio_q03" rows="3"></textarea>
+      <label>Q4: What is your most prized possession?</label>
+      <textarea name="attr_bio_q04" rows="3"></textarea>
+      <label>Q5: How have you gained success or suffered failure?</label>
+      <textarea name="attr_bio_q05" rows="3"></textarea>
+      <label>Q6: What drives you?</label>
+      <textarea name="attr_bio_q06" rows="3"></textarea>
+      <label>Q7: Who are your closest friends?</label>
+      <textarea name="attr_bio_q07" rows="3"></textarea>
+      <label>Q8: Who trained you and in what?</label>
+      <textarea name="attr_bio_q08" rows="3"></textarea>
+      <label>Q9: Are you close to family?</label>
+      <textarea name="attr_bio_q09" rows="3"></textarea>
+      <label>Q10: What is the current state of that relationship?</label>
+      <textarea name="attr_bio_q10" rows="3"></textarea>
+      <label>Q11: Current love interest?</label>
+      <textarea name="attr_bio_q11" rows="3"></textarea>
+      <label>Q12: Are you in a relationship?</label>
+      <textarea name="attr_bio_q12" rows="3"></textarea>
+      <label>Q13: What has been your greatest love?</label>
+      <textarea name="attr_bio_q13" rows="3"></textarea>
+      <label>Q14: What are your bathing habits?</label>
+      <textarea name="attr_bio_q14" rows="3"></textarea>
+      <label>Q15: Have you killed anyone?</label>
+      <textarea name="attr_bio_q15" rows="3"></textarea>
+      <label>Q16: Have you been jailed or imprisoned?</label>
+      <textarea name="attr_bio_q16" rows="3"></textarea>
+      <label>Q17: How do you look and dress?</label>
+      <textarea name="attr_bio_q17" rows="3"></textarea>
+      <label>Q18: What are your noticeable mannerisms?</label>
+      <textarea name="attr_bio_q18" rows="3"></textarea>
+      <label>Q19: What are your greatest virtues?</label>
+      <textarea name="attr_bio_q19" rows="3"></textarea>
+      <label>Q20: What are your greatest flaws?</label>
+      <textarea name="attr_bio_q20" rows="3"></textarea>
+    </div>
+  </div>
+</div>
+
+<rolltemplate class="sheet-rolltemplate-init">
+  <div class="sheet-template-wrapper">
+    <div class="sheet-template-header">
+      {{charname}} — {{rollname}}
+    </div>
+    <div class="sheet-template-body">
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">Result:</span>
+        <span class="sheet-template-result">{{result}}</span>
+      </div>
+    </div>
+  </div>
+</rolltemplate>
+
+<rolltemplate class="sheet-rolltemplate-skill">
+  <div class="sheet-template-wrapper">
+    <div class="sheet-template-header sheet-header-skill">
+      {{charname}} — {{rollname}}
+    </div>
+    <div class="sheet-template-body">
+      {{#linked_attr}}
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">Linked:</span> <span>{{linked_attr}}</span>
+      </div>
+      {{/linked_attr}}
+      {{#tn}}
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">TN:</span> <span>{{tn}}</span>
+      </div>
+      {{/tn}}
+      {{#successes}}
+      <div class="sheet-template-row sheet-template-roll-result">
+        <span class="sheet-template-label">Successes:</span> <span class="sheet-template-successes">{{successes}}</span>
+      </div>
+      {{/successes}}
+      {{^successes}}
+      {{#tn}}
+      <div class="sheet-template-nosuccess">
+        &#x26A0; No successes — all 1s = Critical Failure.
+      </div>
+      {{/tn}}
+      {{/successes}}
+      {{#dice}}
+      <div class="sheet-template-row sheet-template-roll-result">
+        <span class="sheet-template-label">Dice:</span> <span>{{dice}}</span>
+      </div>
+      {{/dice}}
+      {{^tn}}
+      <div class="sheet-template-row">
+        <span class="sheet-template-label" style="color:#888;font-style:italic">TN unknown — hover dice to read values</span>
+      </div>
+      {{/tn}}
+    </div>
+  </div>
+</rolltemplate>
+
+<rolltemplate class="sheet-rolltemplate-attack">
+  <div class="sheet-template-wrapper">
+    <div class="sheet-template-header sheet-header-attack">
+      {{charname}} — {{rollname}}
+    </div>
+    <div class="sheet-template-body">
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">Weapon:</span> <span>{{weapon_name}}</span>
+      </div>
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">TN:</span> <span>{{tn}}</span>
+        <span class="sheet-template-label" style="margin-left:10px">Power:</span> <span>{{power}}</span>
+        <span class="sheet-template-label" style="margin-left:10px">Dmg:</span> <span>{{damage_code}}</span>
+      </div>
+      {{#reach}}
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">Reach:</span> <span>{{reach}}</span>
+      </div>
+      {{/reach}}
+      {{#range_band}}
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">Range:</span> <span>{{range_band}}</span>
+      </div>
+      {{/range_band}}
+      {{#successes}}
+      <div class="sheet-template-row sheet-template-roll-result">
+        <span class="sheet-template-label">Successes:</span> <span class="sheet-template-successes">{{successes}}</span>
+      </div>
+      {{/successes}}
+      {{^successes}}
+      <div class="sheet-template-nosuccess">
+        &#x26A0; No successes — all 1s = Critical Failure.
+      </div>
+      {{/successes}}
+    </div>
+  </div>
+</rolltemplate>
+
+<rolltemplate class="sheet-rolltemplate-spell">
+  <div class="sheet-template-wrapper">
+    <div class="sheet-template-header sheet-header-spell">
+      {{charname}} — {{rollname}}
+    </div>
+    <div class="sheet-template-body">
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">Spell:</span> <span>{{spell_name}}</span>
+      </div>
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">Force:</span> <span>{{force}}</span>
+        <span class="sheet-template-label" style="margin-left:10px">Drain:</span> <span>{{drain_code}}</span>
+      </div>
+      <div class="sheet-template-row">
+        <span class="sheet-template-label">TN:</span> <span>{{tn}}</span>
+      </div>
+      {{#successes}}
+      <div class="sheet-template-row sheet-template-roll-result">
+        <span class="sheet-template-label">Successes:</span> <span class="sheet-template-successes">{{successes}}</span>
+      </div>
+      {{/successes}}
+      {{^successes}}
+      <div class="sheet-template-nosuccess">
+        &#x26A0; No successes — all 1s = Critical Failure.
+      </div>
+      {{/successes}}
+    </div>
+  </div>
+</rolltemplate>
