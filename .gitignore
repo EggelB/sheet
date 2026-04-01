@@ -1,57 +1,57 @@
-# Virtual environment
-.venv/
+# ============================================================
+# .gitignore — Enemies in the Shadows TTRPG Codebase
+# ============================================================
+# Organized by category. Keep alphabetical within sections.
 
-# Python bytecode
+# --- OS artifacts ---
+.DS_Store
+Thumbs.db
+
+# --- Editor / IDE ---
+.vscode/
+
+# --- Python ---
+.venv/
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-
-# Distribution / packaging
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 dist/
 build/
 *.egg-info/
 *.egg
 
-# Test & coverage artifacts
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
+# --- Node / SvelteKit (companion app) ---
+node_modules/
+.svelte-kit/
+.wrangler/
 
-# Linter / type checker caches
-.ruff_cache/
-.mypy_cache/
+# --- Companion app local secrets ---
+companion/.dev.vars
 
-# Logs
-*.log
-
-# TEMPO runtime state — machine-specific, regenerated each session
+# --- TEMPO runtime state (machine-specific, regenerated each session) ---
 .github/workflow-state.json
 
-# OS artifacts
-.DS_Store
-Thumbs.db
-
-# Editor config
-.vscode/
-
-# Archive — old prototypes, not needed in repo
-archive/
-
-# One-off verification scripts
-verify*.py
-
-# Manual backup files
-sheet_backup.html
-
-# Local gate script
-tempo_gate.ps1
-
-# Binary reference files — source of truth lives locally
-plans/*.xlsx
-plans/*.png
-
+# --- Elements: reference materials (local-only) ---
+# Obsidian source .md files from the GM — used for comparison, not code
+elements/*/
+# Excel workbooks and image references
+elements/*.xlsx
+elements/*.png
 # Excel temp files
 ~$*.xlsx
+
+# --- Local scripts & one-off files ---
+verify*.py
+tempo_gate.ps1
+sheet_backup.html
+
+# --- Logs ---
+*.log

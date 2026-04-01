@@ -278,7 +278,7 @@ ON AUTO-SUMMARIZATION OR NEW SESSION:
 - **Seed prompts:** `chain-of-density-synthesis.md` · `gap-analysis-loop.md` · `adr-template.md` · `assess-implement-gate.md` · `socratic-decomposition.md` · `systems-diagram-brief.md`
 
 **Custom Agents** (`.github/agents/`):
-- Six purpose-built VS Code agents. Each `.agent.md` file appears natively in the Copilot agents dropdown.
+- Seven purpose-built VS Code agents. Each `.agent.md` file appears natively in the Copilot agents dropdown.
 
 | Agent | File | Tier | Workflow Role | Invocable |
 |---|---|---|---|---|
@@ -288,6 +288,7 @@ ON AUTO-SUMMARIZATION OR NEW SESSION:
 | Quick Developer | `quick-developer.agent.md` | haiku | filler | User |
 | Tempo Reviewer | `tempo-reviewer.agent.md` | opus | reviewer | Handoff only |
 | Deep Researcher | `deep-researcher.agent.md` | sonnet | researcher | User |
+| Human Preference | `human-preference.agent.md` | opus | none | User |
 
 - `strategic-collaborator.agent.md` — Layer 1 partner. Produces ADRs, system diagrams, and the Layer 1 Handoff Plan. Never writes code. Hands off to Tempo Planner.
 - `tempo-planner.agent.md` — Layers 2–4 operative planner. One phase per invocation. Hands off to Tempo Synthesizer after DRY audit.
@@ -295,4 +296,5 @@ ON AUTO-SUMMARIZATION OR NEW SESSION:
 - `quick-developer.agent.md` — Compressed TEMPO for tasks ≤1 hour. Assess → Implement → Gate. Delegates to `assess-implement-gate.md`.
 - `tempo-reviewer.agent.md` — Adversarial output validator. Handoff only. PASS/PASS WITH NOTES/FAIL verdict. Never fixes.
 - `deep-researcher.agent.md` — Multi-pass gap-analysis research engine. Delegates to `gap-analysis-loop.md` and `chain-of-density-synthesis.md`.
+- `human-preference.agent.md` — Player-persona UX evaluator. Thinks like a real end-user. Produces friction reports and feature wishlists. Never writes code. Hands off to Strategic Collaborator for design exploration.
 - **Tool IDs:** Use VS Code camelCase names (`readFile`, `editFiles`, `runInTerminal`) and MCP server wildcards (`tempo.memory/*`) — NOT snake_case API names.
