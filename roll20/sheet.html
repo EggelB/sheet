@@ -50,10 +50,13 @@ calcAttr4('int');
 calcAttr4('wil');
 calcAttr4('hum');
 
-// mag has no _mutations or _magic sub-fields by design
-on('change:mag_base change:mag_misc', function() {
-  getAttrs(['mag_base', 'mag_misc'], function(v) {
-    setAttrs({ mag: (parseInt(v.mag_base, 10) || 0) + (parseInt(v.mag_misc, 10) || 0) });
+// mag = base + misc - essence_spent (ADR-001; floors at 0)
+on('change:mag_base change:mag_misc change:essence_spent', function() {
+  getAttrs(['mag_base', 'mag_misc', 'essence_spent'], function(v) {
+    var base  = parseInt(v.mag_base, 10) || 0;
+    var misc  = parseInt(v.mag_misc, 10) || 0;
+    var spent = parseFloat(v.essence_spent) || 0;
+    setAttrs({ mag: Math.max(0, base + misc - spent) });
   });
 });
 
@@ -131,12 +134,13 @@ calcPoolTotal('astral');
 
 // ─── Layer 4c: Initiative Score ──────────────────────────
 
-on('change:reaction change:init_reaction_mod change:init_misc_mod', function() {
-  getAttrs(['reaction', 'init_reaction_mod', 'init_misc_mod'], function(v) {
+on('change:reaction change:init_reaction_mod change:init_misc_mod change:cm_init_mod', function() {
+  getAttrs(['reaction', 'init_reaction_mod', 'init_misc_mod', 'cm_init_mod'], function(v) {
     var reaction       = parseInt(v.reaction, 10) || 0;
     var init_react_mod = parseInt(v.init_reaction_mod, 10) || 0;
     var init_misc_mod  = parseInt(v.init_misc_mod, 10) || 0;
-    setAttrs({ init_score: reaction + init_react_mod + init_misc_mod });
+    var cm_init_mod    = parseInt(v.cm_init_mod, 10) || 0;
+    setAttrs({ init_score: reaction + init_react_mod + init_misc_mod + cm_init_mod });
   });
 });
 
@@ -223,6 +227,14 @@ on('change:power_points_max change:power_points_used', function() {
   });
 });
 
+// ─── Layer 5d2: PP Cost text→numeric sync ────────────────
+
+on('change:repeating_adept_powers:power_pp_cost', function() {
+  getAttrs(['power_pp_cost'], function(v) {
+    setAttrs({ power_pp_cost_value: parseFloat(v.power_pp_cost) || 0 });
+  });
+});
+
 // ─── Layer 5e: Essence Total ─────────────────────────────
 
 on('change:repeating_mutations:mutation_essence remove:repeating_mutations', function() {
@@ -232,8 +244,14 @@ on('change:repeating_mutations:mutation_essence remove:repeating_mutations', fun
     getAttrs(fields, function(v) {
       var total = 0;
       ids.forEach(function(id) { total += parseFloat(v['repeating_mutations_' + id + '_mutation_essence'] || 0); });
-      setAttrs({ essence_total: total });
+      setAttrs({ essence_spent: total });
     });
+  });
+});
+
+on('change:essence_spent', function() {
+  getAttrs(['essence_spent'], function(v) {
+    setAttrs({ essence_total: Math.max(0, 6 - (parseFloat(v.essence_spent) || 0)) });
   });
 });
 
@@ -242,7 +260,7 @@ on('change:repeating_mutations:mutation_essence remove:repeating_mutations', fun
 on('change:karma_good change:karma_used', function() {
   getAttrs(['karma_good', 'karma_used'], function(v) {
     setAttrs({
-      karma_total: (parseInt(v.karma_good, 10) || 0) + (parseInt(v.karma_used, 10) || 0)
+      karma_total: (parseInt(v.karma_good, 10) || 0) - (parseInt(v.karma_used, 10) || 0)
     });
   });
 });
@@ -328,6 +346,37 @@ on('sheet:opened', function() {
           (parseInt(v[p + 'skill_misc'], 10) || 0);
       });
       setAttrs(out);
+    });
+  });
+
+  // Recalculate PP cost numeric values on sheet open (legacy character fix)
+  getSectionIDs('repeating_adept_powers', function(ids) {
+    var fields = [];
+    ids.forEach(function(id) {
+      fields.push('repeating_adept_powers_' + id + '_power_pp_cost');
+    });
+    getAttrs(fields, function(v) {
+      var out = {};
+      ids.forEach(function(id) {
+        var p = 'repeating_adept_powers_' + id + '_';
+        out[p + 'power_pp_cost_value'] = parseFloat(v[p + 'power_pp_cost'] || 0) || 0;
+      });
+      setAttrs(out);
+    });
+  });
+
+  // Recalculate essence_spent on sheet open (legacy character migration)
+  getSectionIDs('repeating_mutations', function(ids) {
+    var fields = [];
+    ids.forEach(function(id) {
+      fields.push('repeating_mutations_' + id + '_mutation_essence');
+    });
+    getAttrs(fields, function(v) {
+      var total = 0;
+      ids.forEach(function(id) {
+        total += parseFloat(v['repeating_mutations_' + id + '_mutation_essence'] || 0);
+      });
+      setAttrs({ essence_spent: total });
     });
   });
 });
@@ -474,7 +523,7 @@ on('clicked:btn_sync_db', function() {
     'armor_head_name', 'armor_head_piercing', 'armor_head_slashing', 'armor_head_impact',
     'armor_total_piercing', 'armor_total_slashing', 'armor_total_impact',
     'power_points_max', 'power_points_used', 'power_points_remaining',
-    'spells_sustained', 'sustained_tn_mod', 'tn_warning_level', 'essence_total',
+    'spells_sustained', 'sustained_tn_mod', 'tn_warning_level', 'essence_total', 'essence_spent',
     'money_gold', 'money_silver', 'money_copper'
   ];
 
@@ -913,6 +962,7 @@ on('clicked:btn_sync_db', function() {
         <span class="sheet-summary-title">ESSENCE</span>
         <label>Total:</label>
         <input type="number" name="attr_essence_total" value="6" readonly class="sheet-computed-badge">
+        <input type="hidden" name="attr_essence_spent" value="0">
       </div>
       <!-- Column header row -->
       <div class="sheet-mutations-header">
@@ -1187,7 +1237,7 @@ on('clicked:btn_sync_db', function() {
       <h3 class="sheet-section-title">Combat</h3>
       <div class="sheet-combat-buttons">
         <button type="roll" name="roll_btn_dodge" value="&{template:skill} {{charname=@{char_name}}} {{rollname=Dodge}} {{tn=[[4+@{cm_tn_mod}]]}} {{successes=[[{?{Combat Pool dice for dodge|0}d6!!}>[[4+@{cm_tn_mod}]]]]}}">Dodge</button>
-        <button type="roll" name="roll_btn_damage_resist_body" value="&{template:skill} {{charname=@{char_name}}} {{rollname=Resist Damage (Body)}} {{tn=[[?{TN (Power - Armor)|0}+@{cm_tn_mod}]]}} {{successes=[[{(@{body}+?{Combat Pool dice|0})d6!!}>[[?{TN (Power - Armor)|0}+@{cm_tn_mod}]]]]}}">Resist Damage (Body)</button>
+        <button type="roll" name="roll_btn_damage_resist_body" value="&{template:skill} {{charname=@{char_name}}} {{rollname=Resist Damage (Body)}} {{tn=[[?{TN (Power - Armor)|0}]]}} {{successes=[[{(@{body}+?{Combat Pool dice|0})d6!!}>[[?{TN (Power - Armor)|0}]]]]}}">Resist Damage (Body)</button>
       </div>
     </div>
 
