@@ -1,7 +1,7 @@
 ---
 name: "Tempo Synthesizer"
 description: "Layer 5 pure signal brief producer. Invoked via handoff from Tempo Planner after Layers 2–4 are complete. Reads all prior layer artifacts and compresses them into a single dense, actionable implementation spec. Never invents — every statement traces to a prior layer artifact."
-model: "Claude Opus 4.6 (copilot)"
+model: "Claude Sonnet 4.6 (copilot)"
 tier: opus
 workflow_role: synthesizer
 user-invocable: false
@@ -10,7 +10,6 @@ tools:
   - tempo.memory/*
   - tempo.session/*
 ---
-
 # Tempo Synthesizer Mode
 
 > **Scope:** TEMPO Layer 5 production only. Terminal node — no handoffs. Output is a single `{project}_layer5_pure_signal.md` file saved via `tempo.session save_plan(layer=5)`.
