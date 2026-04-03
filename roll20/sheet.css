@@ -662,17 +662,62 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
   box-sizing: border-box;
 }
 
-/* Spacer column — aligns headers with repitem + repcontrol_del */
-.sheet-hdr-spacer { flex: 0 0 20px; }
-
-/* Match header span geometry to input border+padding for pixel-perfect alignment */
+/* ───────────────────────────────────────────────────────
+ * Global: header span geometry normalisation + column dividers
+ *
+ * All header spans get border+padding matching input geometry so
+ * column widths stay pixel-perfect. border-right-color is set to a
+ * visible colour here which produces column separators across every
+ * table header. The spacer span (delete-button placeholder) suppresses
+ * its right border so no trailing divider appears.
+ *
+ * Matching border-right-color on .repitem data cells ensures the
+ * column separator lines run through the full height of every row.
+ * ─────────────────────────────────────────────────────── */
 .sheet-skills-header > span,
 .sheet-mutations-header > span,
-.sheet-powers-header > span {
+.sheet-powers-header > span,
+.sheet-spells-header > span,
+.sheet-foci-header > span,
+.sheet-weapons-header > span,
+.sheet-equipment-header > span,
+.sheet-contacts-header > span,
+.sheet-companions-header > span,
+.sheet-milestones-header > span,
+.sheet-karma-log-header > span {
   padding: 2px 4px;
   border: 1px solid transparent;
+  border-right-color: #aaa;
   box-sizing: border-box;
 }
+
+/* Spacer span (delete-button placeholder) — suppress right divider.
+ * Needs compound selector to beat the header > span rules above. */
+.sheet-skills-header > span.sheet-hdr-spacer,
+.sheet-mutations-header > span.sheet-hdr-spacer,
+.sheet-powers-header > span.sheet-hdr-spacer,
+.sheet-spells-header > span.sheet-hdr-spacer,
+.sheet-foci-header > span.sheet-hdr-spacer,
+.sheet-weapons-header > span.sheet-hdr-spacer,
+.sheet-equipment-header > span.sheet-hdr-spacer,
+.sheet-contacts-header > span.sheet-hdr-spacer,
+.sheet-companions-header > span.sheet-hdr-spacer,
+.sheet-milestones-header > span.sheet-hdr-spacer,
+.sheet-karma-log-header > span.sheet-hdr-spacer {
+  border-right-color: transparent;
+}
+
+/* Column separators continue into data rows — all direct-child
+ * text/number inputs and selects inside .repitem get the same
+ * right-edge colour so dividers span full column height. */
+.repitem > input[type="text"],
+.repitem > input[type="number"],
+.repitem > select {
+  border-right-color: #aaa;
+}
+
+/* Spacer column — aligns headers with repitem + repcontrol_del */
+.sheet-hdr-spacer { flex: 0 0 20px; }
 
 /* Fix delete button width for column alignment in Skills tab */
 .sheet-tab-panel-skills .repcontrol_del {
@@ -766,15 +811,15 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
 .sheet-hdr-mutation-name    { flex: 2 1 120px; }
 .sheet-hdr-mutation-level   { flex: 0 0 45px; text-align: center; }
 .sheet-hdr-mutation-essence  { flex: 0 0 55px; text-align: center; }
-.sheet-hdr-mutation-bp      { flex: 0 0 40px; text-align: center; }
+.sheet-hdr-mutation-bp      { flex: 0 0 55px; text-align: center; }
 .sheet-hdr-mutation-effect   { flex: 2 1 120px; }
 
 /* Mutation repeating row column widths */
 .sheet-tab-panel-skills .repitem .sheet-mutation-name    { flex: 2 1 120px; min-width: 0; }
 .sheet-tab-panel-skills .repitem .sheet-mutation-level   { flex: 0 0 45px; width: 45px; text-align: center; }
 .sheet-tab-panel-skills .repitem .sheet-mutation-essence  { flex: 0 0 55px; width: 55px; text-align: center; }
-.sheet-tab-panel-skills .repitem .sheet-mutation-bp      { flex: 0 0 40px; width: 40px; text-align: center; }
-.sheet-tab-panel-skills .repitem .sheet-mutation-effect   { flex: 2 1 120px; min-width: 0; }
+.sheet-tab-panel-skills .repitem .sheet-mutation-bp      { flex: 0 0 55px; width: 55px; text-align: center; }
+.sheet-tab-panel-skills .repitem .sheet-mutation-effect   { flex: 2 1 120px; min-width: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 
 /* --- Adept Powers container box --- */
 .sheet-section-adept-powers {
@@ -821,7 +866,23 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
 .sheet-tab-panel-skills .repitem .sheet-power-name    { flex: 2 1 120px; min-width: 0; }
 .sheet-tab-panel-skills .repitem .sheet-power-level   { flex: 0 0 45px; width: 45px; text-align: center; }
 .sheet-tab-panel-skills .repitem .sheet-power-pp-cost { flex: 0 0 55px; width: 55px; text-align: center; }
-.sheet-tab-panel-skills .repitem .sheet-power-effect  { flex: 2 1 120px; min-width: 0; }
+.sheet-tab-panel-skills .repitem .sheet-power-effect  { flex: 2 1 120px; min-width: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+
+/* Chat effect button and header */
+.sheet-btn-chat-effect {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid #999;
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.sheet-hdr-chat { flex: 0 0 24px; text-align: center; }
 
 /* Shared summary title span — reused by Mutations + Adept Powers */
 .sheet-summary-title {
@@ -927,14 +988,6 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
   border-bottom: 2px solid #5f5f5f;
   font-size: 12px;
   font-weight: bold;
-}
-
-/* Match header span geometry to input border+padding */
-.sheet-spells-header > span,
-.sheet-foci-header > span {
-  padding: 2px 4px;
-  border: 1px solid transparent;
-  box-sizing: border-box;
 }
 
 .sheet-hdr-spell-name     { flex: 3 1 140px; }
@@ -1129,6 +1182,8 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
   box-sizing: border-box;
 }
 
+.sheet-spirit-roll-btn { padding: 4px 10px; font-size: 13px; cursor: pointer; margin-top: 4px; }
+
 /* ===================================================
  * SECTION 9d: GEAR TAB — EQUIPMENT REPEATING ROWS
  * =================================================== */
@@ -1153,10 +1208,12 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
 }
 
 .sheet-hdr-equip-name { flex: 2 1 120px; }
+.sheet-hdr-equip-qty  { flex: 0 0 40px; text-align: center; }
 .sheet-hdr-equip-desc { flex: 3 1 150px; }
 .sheet-hdr-equip-ep   { flex: 0 0 40px; text-align: center; }
 
 .sheet-tab-panel-gear .repitem .sheet-equip-name { flex: 2 1 120px; min-width: 0; }
+.sheet-tab-panel-gear .repitem .sheet-equip-qty  { flex: 0 0 40px; width: 40px; text-align: center; }
 .sheet-tab-panel-gear .repitem .sheet-equip-desc { flex: 3 1 150px; min-width: 0; }
 .sheet-tab-panel-gear .repitem .sheet-equip-ep   { flex: 0 0 40px; width: 40px; text-align: center; }
 
@@ -1333,17 +1390,43 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
   font-size: 14px;
 }
 
-/* --- Shared body rules (all 3 templates) --- */
+.sheet-rolltemplate-desc {
+  display: block;
+  border: 1px solid #2a3a2a;
+  font-family: sans-serif;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 200px;
+}
+
+.sheet-rolltemplate-desc .sheet-template-header {
+  background-color: #2a3a2a;
+  color: #ffffff;
+  padding: 6px 10px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.sheet-template-desc {
+  padding: 4px 8px;
+  white-space: pre-wrap;
+  display: block;
+}
+
+/* --- Shared body rules (all 4 templates) --- */
 
 .sheet-rolltemplate-skill .sheet-template-body,
 .sheet-rolltemplate-attack .sheet-template-body,
-.sheet-rolltemplate-spell .sheet-template-body {
+.sheet-rolltemplate-spell .sheet-template-body,
+.sheet-rolltemplate-desc .sheet-template-body {
   padding: 2px 0;
 }
 
 .sheet-rolltemplate-skill .sheet-template-row,
 .sheet-rolltemplate-attack .sheet-template-row,
-.sheet-rolltemplate-spell .sheet-template-row {
+.sheet-rolltemplate-spell .sheet-template-row,
+.sheet-rolltemplate-desc .sheet-template-row {
   display: flex;
   align-items: baseline;
   padding: 3px 10px;
@@ -1352,7 +1435,8 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
 
 .sheet-rolltemplate-skill .sheet-template-label,
 .sheet-rolltemplate-attack .sheet-template-label,
-.sheet-rolltemplate-spell .sheet-template-label {
+.sheet-rolltemplate-spell .sheet-template-label,
+.sheet-rolltemplate-desc .sheet-template-label {
   font-weight: bold;
   color: #555555;
   min-width: 80px;
@@ -1362,7 +1446,8 @@ input#sheet-tab-bio:checked    ~ .sheet-compact-target .sheet-tab-panel-bio    {
 
 .sheet-rolltemplate-skill .sheet-template-value,
 .sheet-rolltemplate-attack .sheet-template-value,
-.sheet-rolltemplate-spell .sheet-template-value {
+.sheet-rolltemplate-spell .sheet-template-value,
+.sheet-rolltemplate-desc .sheet-template-value {
   flex: 1;
   font-size: 13px;
 }
@@ -1582,13 +1667,10 @@ input[name="attr_tn_warning_level"][value="3"] ~ .sheet-tn-warning {
   text-align: center;
 }
 
-/* Match header span geometry to input border+padding */
-.sheet-weapons-header > span,
-.sheet-equipment-header > span,
-.sheet-contacts-header > span {
-  padding: 2px 4px;
-  border: 1px solid transparent;
-  box-sizing: border-box;
+.sheet-tab-panel-bio .repcontrol_del {
+  margin-left: 0;
+  flex: 0 0 20px;
+  text-align: center;
 }
 
 /* --- EP Tracker strip (matches initiative/karma pattern) --- */
@@ -1643,7 +1725,7 @@ input[name="attr_tn_warning_level"][value="3"] ~ .sheet-tn-warning {
 
 /* Weapon header column widths */
 .sheet-hdr-weapon-name    { flex: 2 1 100px; }
-.sheet-hdr-weapon-type    { flex: 0 0 80px; }
+.sheet-hdr-weapon-type    { flex: 0 0 110px; }
 .sheet-hdr-weapon-mods    { flex: 1 1 60px; }
 .sheet-hdr-weapon-power   { flex: 0 0 40px; text-align: center; }
 .sheet-hdr-weapon-damage  { flex: 0 0 55px; text-align: center; }
@@ -1655,7 +1737,7 @@ input[name="attr_tn_warning_level"][value="3"] ~ .sheet-tn-warning {
 
 /* Weapon repitem column widths */
 .sheet-tab-panel-gear .repitem .sheet-weapon-name      { flex: 2 1 100px; min-width: 0; }
-.sheet-tab-panel-gear .repitem .sheet-weapon-type      { flex: 0 0 80px; width: 80px; }
+.sheet-tab-panel-gear .repitem .sheet-weapon-type      { flex: 0 0 110px; width: 110px; }
 .sheet-tab-panel-gear .repitem .sheet-weapon-modifiers { flex: 1 1 60px; min-width: 0; }
 .sheet-tab-panel-gear .repitem .sheet-weapon-power     { flex: 0 0 40px; width: 40px; text-align: center; }
 .sheet-tab-panel-gear .repitem .sheet-weapon-damage    { flex: 0 0 55px; width: 55px; text-align: center; }
@@ -1663,13 +1745,12 @@ input[name="attr_tn_warning_level"][value="3"] ~ .sheet-tn-warning {
 .sheet-tab-panel-gear .repitem .sheet-weapon-reach     { flex: 0 0 36px; width: 36px; text-align: center; }
 .sheet-tab-panel-gear .repitem .sheet-weapon-ep        { flex: 0 0 36px; width: 36px; text-align: center; }
 
-/* Range band wrapper + 4 × 36px range inputs */
+/* Range band wrapper + 4 × individual range inputs */
 .sheet-tab-panel-gear .repitem .sheet-range-bands {
   display: flex;
   gap: 2px;
   flex: 0 0 152px;
 }
-
 .sheet-tab-panel-gear .repitem .sheet-range-short,
 .sheet-tab-panel-gear .repitem .sheet-range-medium,
 .sheet-tab-panel-gear .repitem .sheet-range-long,
@@ -1680,8 +1761,14 @@ input[name="attr_tn_warning_level"][value="3"] ~ .sheet-tn-warning {
 }
 
 /* Roll buttons inside weapon rows */
+.sheet-weapon-roll-group {
+  display: flex;
+  gap: 2px;
+  flex: 0 0 70px;
+}
+
 .sheet-tab-panel-gear .repitem .sheet-btn-attack {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   padding: 2px 4px;
   font-size: 11px;
 }
@@ -1831,3 +1918,38 @@ input[name="attr_tn_warning_level"][value="3"] ~ .sheet-tn-warning {
 .sheet-compact-target {
   min-width: 340px;
 }
+
+/* ===================================================
+ * SECTION: COMPANIONS & CONTROLLED CREATURES
+ * =================================================== */
+
+.sheet-companions-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f2f2f2;
+  border: 2px solid #5f5f5f;
+  padding: 2px 6px;
+  margin-top: 12px;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.sheet-hdr-comp-name     { flex: 2 1 120px; }
+.sheet-hdr-comp-stat     { flex: 0 0 38px; text-align: center; }
+.sheet-hdr-comp-reaction { flex: 0 0 38px; text-align: center; }
+.sheet-hdr-comp-cm       { flex: 0 0 90px; text-align: center; }
+.sheet-hdr-comp-atk      { flex: 0 0 36px; text-align: center; }
+
+.sheet-comp-name     { flex: 2 1 120px; min-width: 0; }
+.sheet-comp-stat     { flex: 0 0 38px; width: 38px; text-align: center; }
+.sheet-comp-reaction {
+  flex: 0 0 38px;
+  width: 38px;
+  text-align: center;
+  font-weight: bold;
+  background-color: #e8e8e8;
+  border: 1px solid #999;
+}
+.sheet-comp-cm-level { flex: 0 0 90px; }
+.sheet-comp-attack   { flex: 0 0 36px; cursor: pointer; }

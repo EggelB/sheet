@@ -79,38 +79,49 @@ on('change:reaction_base change:reaction_misc', function() {
   });
 });
 
-// ─── Layer 4a: Dice Pool Bases ───────────────────────────
+// ─── Layer 4a: Dice Pool Bases + Totals (merged, silent) ────
+// Computes base and total in a single setAttrs({...}, {silent:true})
+// to avoid a second cascade hop via calcPoolTotal. calcPoolTotal is
+// retained below for when the player edits pool_X_misc directly.
 
 on('change:cha change:int change:wil', function() {
-  getAttrs(['cha', 'int', 'wil'], function(v) {
-    var cha = parseInt(v.cha, 10) || 0;
-    var i   = parseInt(v.int, 10) || 0;
-    var wil = parseInt(v.wil, 10) || 0;
-    setAttrs({ pool_spell_base: Math.max(0, Math.floor((cha + i + wil) / 2)) });
+  getAttrs(['cha', 'int', 'wil', 'pool_spell_misc'], function(v) {
+    var cha  = parseInt(v.cha, 10) || 0;
+    var i    = parseInt(v.int, 10) || 0;
+    var wil  = parseInt(v.wil, 10) || 0;
+    var misc = parseInt(v.pool_spell_misc, 10) || 0;
+    var base = Math.max(0, Math.floor((cha + i + wil) / 2));
+    setAttrs({ pool_spell_base: base, pool_spell: Math.max(0, base + misc) }, {silent: true});
   });
 });
 
 on('change:dex change:int change:wil', function() {
-  getAttrs(['dex', 'int', 'wil'], function(v) {
-    var dex = parseInt(v.dex, 10) || 0;
-    var i   = parseInt(v.int, 10) || 0;
-    var wil = parseInt(v.wil, 10) || 0;
-    setAttrs({ pool_combat_base: Math.max(0, Math.floor((dex + i + wil) / 2)) });
+  getAttrs(['dex', 'int', 'wil', 'pool_combat_misc'], function(v) {
+    var dex  = parseInt(v.dex, 10) || 0;
+    var i    = parseInt(v.int, 10) || 0;
+    var wil  = parseInt(v.wil, 10) || 0;
+    var misc = parseInt(v.pool_combat_misc, 10) || 0;
+    var base = Math.max(0, Math.floor((dex + i + wil) / 2));
+    setAttrs({ pool_combat_base: base, pool_combat: Math.max(0, base + misc) }, {silent: true});
   });
 });
 
 on('change:reaction', function() {
-  getAttrs(['reaction'], function(v) {
-    setAttrs({ pool_control_base: parseInt(v.reaction, 10) || 0 });
+  getAttrs(['reaction', 'pool_control_misc'], function(v) {
+    var base = parseInt(v.reaction, 10) || 0;
+    var misc = parseInt(v.pool_control_misc, 10) || 0;
+    setAttrs({ pool_control_base: base, pool_control: Math.max(0, base + misc) }, {silent: true});
   });
 });
 
 on('change:int change:wil change:mag', function() {
-  getAttrs(['int', 'wil', 'mag'], function(v) {
-    var i   = parseInt(v.int, 10) || 0;
-    var wil = parseInt(v.wil, 10) || 0;
-    var mag = parseInt(v.mag, 10) || 0;
-    setAttrs({ pool_astral_base: Math.max(0, Math.floor((i + wil + mag) / 3)) });
+  getAttrs(['int', 'wil', 'mag', 'pool_astral_misc'], function(v) {
+    var i    = parseInt(v.int, 10) || 0;
+    var wil  = parseInt(v.wil, 10) || 0;
+    var mag  = parseInt(v.mag, 10) || 0;
+    var misc = parseInt(v.pool_astral_misc, 10) || 0;
+    var base = Math.max(0, Math.floor((i + wil + mag) / 3));
+    setAttrs({ pool_astral_base: base, pool_astral: Math.max(0, base + misc) }, {silent: true});
   });
 });
 
@@ -155,16 +166,20 @@ on('change:str change:body', function() {
 });
 
 // EP Total — sums weapon_ep + equip_ep across repeating sections
-on('change:repeating_weapons:weapon_ep remove:repeating_weapons change:repeating_equipment:equip_ep remove:repeating_equipment', function() {
+on('change:repeating_weapons:weapon_ep remove:repeating_weapons change:repeating_equipment:equip_ep change:repeating_equipment:equip_qty remove:repeating_equipment', function() {
   getSectionIDs('repeating_weapons', function(weaponIds) {
     getSectionIDs('repeating_equipment', function(equipIds) {
       var fields = [];
       weaponIds.forEach(function(id) { fields.push('repeating_weapons_' + id + '_weapon_ep'); });
-      equipIds.forEach(function(id) { fields.push('repeating_equipment_' + id + '_equip_ep'); });
+      equipIds.forEach(function(id) { fields.push('repeating_equipment_' + id + '_equip_ep'); fields.push('repeating_equipment_' + id + '_equip_qty'); });
       getAttrs(fields, function(v) {
         var total = 0;
         weaponIds.forEach(function(id) { total += parseFloat(v['repeating_weapons_' + id + '_weapon_ep'] || 0); });
-        equipIds.forEach(function(id) { total += parseFloat(v['repeating_equipment_' + id + '_equip_ep'] || 0); });
+        equipIds.forEach(function(id) { 
+          var ep = parseFloat(v['repeating_equipment_' + id + '_equip_ep'] || 0);
+          var qty = parseFloat(v['repeating_equipment_' + id + '_equip_qty'] || 0);
+          total += ep * ((qty || 0) || 1);
+        });
         setAttrs({ ep_total: total });
       });
     });
@@ -172,6 +187,8 @@ on('change:repeating_weapons:weapon_ep remove:repeating_weapons change:repeating
 });
 
 // ─── Layer 5b: Armor Totals ──────────────────────────────
+// SR3 stacking rule: torso counts in full; head and legs each
+// contribute only half (floor) when combined with torso armor.
 
 on('change:armor_torso_piercing change:armor_torso_slashing change:armor_torso_impact change:armor_legs_piercing change:armor_legs_slashing change:armor_legs_impact change:armor_head_piercing change:armor_head_slashing change:armor_head_impact', function() {
   getAttrs([
@@ -179,10 +196,11 @@ on('change:armor_torso_piercing change:armor_torso_slashing change:armor_torso_i
     'armor_legs_piercing',  'armor_legs_slashing',  'armor_legs_impact',
     'armor_head_piercing',  'armor_head_slashing',  'armor_head_impact',
   ], function(v) {
+    function n(k) { return parseInt(v[k], 10) || 0; }
     setAttrs({
-      armor_total_piercing: (parseInt(v.armor_torso_piercing, 10) || 0) + (parseInt(v.armor_legs_piercing, 10) || 0) + (parseInt(v.armor_head_piercing, 10) || 0),
-      armor_total_slashing: (parseInt(v.armor_torso_slashing, 10) || 0) + (parseInt(v.armor_legs_slashing, 10) || 0) + (parseInt(v.armor_head_slashing, 10) || 0),
-      armor_total_impact:   (parseInt(v.armor_torso_impact, 10) || 0)   + (parseInt(v.armor_legs_impact, 10) || 0)   + (parseInt(v.armor_head_impact, 10) || 0),
+      armor_total_piercing: n('armor_torso_piercing') + Math.floor(n('armor_legs_piercing') / 2) + Math.floor(n('armor_head_piercing') / 2),
+      armor_total_slashing: n('armor_torso_slashing') + Math.floor(n('armor_legs_slashing') / 2) + Math.floor(n('armor_head_slashing') / 2),
+      armor_total_impact:   n('armor_torso_impact')   + Math.floor(n('armor_legs_impact')   / 2) + Math.floor(n('armor_head_impact')   / 2),
     });
   });
 });
@@ -199,6 +217,86 @@ on('change:repeating_skills:skill_base change:repeating_skills:skill_foci change
   });
 });
 
+// ─── Layer 5c2: Skill Specialization ────────────────────
+
+on('change:repeating_skills:skill_spec', function(eventInfo) {
+  // Extract parent row ID from event source attribute
+  var match = eventInfo.sourceAttribute.match(/^repeating_skills_([^_]+(?:_[^_]+)*?)_skill_spec$/);
+  if (!match) { return; }
+  var parentId = match[1];
+  var pp = 'repeating_skills_' + parentId + '_';
+
+  getAttrs([pp + 'skill_spec', pp + 'skill_parent_id', pp + 'skill_child_id',
+            pp + 'skill_base', pp + 'skill_foci', pp + 'skill_misc',
+            pp + 'skill_name', pp + 'skill_linked_attr', pp + 'skill_general'], function(v) {
+
+    var spec     = parseInt(v[pp + 'skill_spec'], 10) || 0;
+    var parentId_ = v[pp + 'skill_parent_id'] || '';
+    var childId_  = v[pp + 'skill_child_id']  || '';
+    var base     = parseInt(v[pp + 'skill_base'], 10) || 0;
+    var foci     = parseInt(v[pp + 'skill_foci'],  10) || 0;
+    var misc     = parseInt(v[pp + 'skill_misc'],   10) || 0;
+    var name     = v[pp + 'skill_name'] || '';
+    var linked   = v[pp + 'skill_linked_attr'] || '';
+    var general  = v[pp + 'skill_general'] || '';
+
+    if (spec === 1) {
+      // Guard 1: already a child row — prevent grandchild
+      if (parentId_) {
+        var revert1 = {}; revert1[pp + 'skill_spec'] = 0;
+        setAttrs(revert1, {silent: true});
+        return;
+      }
+      // Guard 2: already has a child — prevent duplicate spec
+      if (childId_) {
+        var revert2 = {}; revert2[pp + 'skill_spec'] = 0;
+        setAttrs(revert2, {silent: true});
+        return;
+      }
+      // Guard 3: base must be >= 1 to specialize
+      if (base < 1) {
+        var revert3 = {}; revert3[pp + 'skill_spec'] = 0;
+        setAttrs(revert3, {silent: true});
+        return;
+      }
+
+      // Create child row
+      var newId = generateRowID();
+      var cp = 'repeating_skills_' + newId + '_';
+      var childAttrs = {};
+      childAttrs[cp + 'skill_name']        = name + ' (Spec)';
+      childAttrs[cp + 'skill_base']        = base + 1;
+      childAttrs[cp + 'skill_linked_attr'] = linked;
+      childAttrs[cp + 'skill_general']     = general;
+      childAttrs[cp + 'skill_parent_id']   = parentId;
+      childAttrs[cp + 'skill_foci']        = 0;
+      childAttrs[cp + 'skill_misc']        = 0;
+      childAttrs[cp + 'skill_total']       = base + 1;
+
+      // Update parent: decrement base, update total, store child ID, keep checkbox checked
+      childAttrs[pp + 'skill_spec']     = 1;
+      childAttrs[pp + 'skill_base']     = base - 1;
+      childAttrs[pp + 'skill_total']    = (base - 1) + foci + misc;
+      childAttrs[pp + 'skill_child_id'] = newId;
+      // silent:true prevents skill_spec=1 from re-triggering this handler
+      // and hitting Guard 2 (childId_ already set) which would revert to 0
+      setAttrs(childAttrs, { silent: true });
+
+    } else {
+      // Uncheck — remove child row
+      if (!childId_) { return; }
+      var cp2 = 'repeating_skills_' + childId_ + '_';
+      var parentUpdate = {};
+      parentUpdate[pp + 'skill_base']     = base + 1;
+      parentUpdate[pp + 'skill_total']    = (base + 1) + foci + misc;
+      parentUpdate[pp + 'skill_child_id'] = '';
+      setAttrs(parentUpdate, {silent: true}, function() {
+        removeRepeatingRow('repeating_skills_' + childId_);
+      });
+    }
+  });
+});
+
 // ─── Layer 5d: Adept Power Points ────────────────────────
 
 on('change:mag', function() {
@@ -208,15 +306,17 @@ on('change:mag', function() {
 });
 
 on('change:repeating_adept_powers:power_pp_cost_value remove:repeating_adept_powers', function() {
-  getSectionIDs('repeating_adept_powers', function(ids) {
-    var fields = [];
-    ids.forEach(function(id) { fields.push('repeating_adept_powers_' + id + '_power_pp_cost_value'); });
-    getAttrs(fields, function(v) {
-      var total = 0;
-      ids.forEach(function(id) { total += parseFloat(v['repeating_adept_powers_' + id + '_power_pp_cost_value'] || 0); });
-      setAttrs({ power_points_used: total });
+  setTimeout(function() {
+    getSectionIDs('repeating_adept_powers', function(ids) {
+      var fields = [];
+      ids.forEach(function(id) { fields.push('repeating_adept_powers_' + id + '_power_pp_cost_value'); });
+      getAttrs(fields, function(v) {
+        var total = 0;
+        ids.forEach(function(id) { total += parseFloat(v['repeating_adept_powers_' + id + '_power_pp_cost_value'] || 0); });
+        setAttrs({ power_points_used: total });
+      });
     });
-  });
+  }, 0);
 });
 
 on('change:power_points_max change:power_points_used', function() {
@@ -230,9 +330,11 @@ on('change:power_points_max change:power_points_used', function() {
 // ─── Layer 5d2: PP Cost text→numeric sync ────────────────
 
 on('change:repeating_adept_powers:power_pp_cost', function() {
-  getAttrs(['power_pp_cost'], function(v) {
-    setAttrs({ power_pp_cost_value: parseFloat(v.power_pp_cost) || 0 });
-  });
+  setTimeout(function() {
+    getAttrs(['power_pp_cost'], function(v) {
+      setAttrs({ power_pp_cost_value: parseFloat(v.power_pp_cost) || 0 });
+    });
+  }, 0);
 });
 
 // ─── Layer 5e: Essence Total ─────────────────────────────
@@ -255,15 +357,43 @@ on('change:essence_spent', function() {
   });
 });
 
-// ─── Layer 6a: Karma Total ───────────────────────────────
+// ─── Layer 5g: Companion Reaction ────────────────────────
 
-on('change:karma_good change:karma_used', function() {
-  getAttrs(['karma_good', 'karma_used'], function(v) {
-    setAttrs({
-      karma_total: (parseInt(v.karma_good, 10) || 0) - (parseInt(v.karma_used, 10) || 0)
-    });
+on('change:repeating_companions:comp_i change:repeating_companions:comp_q', function() {
+  getAttrs(['comp_i', 'comp_q'], function(v) {
+    setAttrs({ comp_reaction: Math.floor(((parseInt(v.comp_i, 10) || 0) + (parseInt(v.comp_q, 10) || 0)) / 2) });
   });
 });
+
+// ─── Layer 6a: Karma from Ledger ─────────────────────────
+// Tallies repeating_karma rows: positive amounts → karma_good,
+// negative amounts (normalised via abs) → karma_used, then
+// karma_total = karma_good - karma_used.
+// Roll20 fires remove:repeating_karma AFTER the row is gone, so
+// getSectionIDs already reflects the post-removal state — no timeout needed.
+var calcKarma = function() {
+  getSectionIDs('repeating_karma', function(ids) {
+    if (!ids.length) {
+      setAttrs({ karma_good: 0, karma_used: 0, karma_total: 0 }, { silent: true });
+      return;
+    }
+    var fields = [];
+    ids.forEach(function(id) {
+      fields.push('repeating_karma_' + id + '_karma_amount');
+    });
+    getAttrs(fields, function(v) {
+      var good = 0, used = 0;
+      ids.forEach(function(id) {
+        var amt = parseInt(v['repeating_karma_' + id + '_karma_amount'], 10) || 0;
+        if (amt > 0) { good += amt; }
+        else if (amt < 0) { used += Math.abs(amt); }
+      });
+      setAttrs({ karma_good: good, karma_used: used, karma_total: good - used }, { silent: true });
+    });
+  });
+};
+
+on('change:repeating_karma:karma_amount remove:repeating_karma', calcKarma);
 
 // ─── Layer 6b: Condition Monitor Penalties ───────────────
 // Each track returns the penalty of its highest filled damage level.
@@ -311,7 +441,7 @@ on('change:spells_sustained', function() {
 on('sheet:opened', function() {
   getAttrs([
     'body_base', 'dex_base', 'str_base', 'cha_base', 'int_base', 'wil_base',
-    'hum_base', 'mag_base', 'karma_good', 'spells_sustained'
+    'hum_base', 'mag_base', 'spells_sustained'
   ], function(v) {
     // setAttrs with same values + silent:false re-triggers change handlers
     setAttrs({
@@ -323,29 +453,65 @@ on('sheet:opened', function() {
       wil_base:         v.wil_base,
       hum_base:         v.hum_base,
       mag_base:         v.mag_base,
-      karma_good:       v.karma_good,
       spells_sustained: v.spells_sustained,
     });
   });
+  calcKarma();
   calcCMPenalty();
 
-  // Recalculate all skill totals on sheet open
+  // Recalculate all skill totals on sheet open (3-pass orphan cleanup)
   getSectionIDs('repeating_skills', function(ids) {
+    if (!ids.length) { return; }
+    var idSet = new Set(ids);
     var fields = [];
     ids.forEach(function(id) {
       var p = 'repeating_skills_' + id + '_';
-      fields.push(p + 'skill_base', p + 'skill_foci', p + 'skill_misc');
+      fields.push(p + 'skill_base', p + 'skill_foci', p + 'skill_misc',
+                  p + 'skill_name', p + 'skill_parent_id', p + 'skill_child_id', p + 'skill_spec');
     });
     getAttrs(fields, function(v) {
-      var out = {};
+      var out       = {};
+      var toRemove  = [];
+      var baseFixup = {};   // id → corrected base for orphan-fixed rows
+
+      // Pass 1: Detect orphans and broken reference
       ids.forEach(function(id) {
-        var p = 'repeating_skills_' + id + '_';
-        out[p + 'skill_total'] =
-          (parseInt(v[p + 'skill_base'], 10) || 0) +
-          (parseInt(v[p + 'skill_foci'], 10) || 0) +
-          (parseInt(v[p + 'skill_misc'], 10) || 0);
+        var p       = 'repeating_skills_' + id + '_';
+        var childId  = v[p + 'skill_child_id']  || '';
+        var parentId = v[p + 'skill_parent_id'] || '';
+        var base     = parseInt(v[p + 'skill_base'], 10) || 0;
+
+        if (childId && !idSet.has(childId)) {
+          // Parent whose child was deleted — restore base+1, clear refs
+          out[p + 'skill_child_id'] = '';
+          out[p + 'skill_spec']     = 0;
+          baseFixup[id] = base + 1;
+        }
+        if (parentId && !idSet.has(parentId)) {
+          // Child whose parent was deleted — orphaned child, remove it
+          toRemove.push(id);
+        }
       });
-      setAttrs(out);
+
+      // Pass 2: Remove orphaned children
+      toRemove.forEach(function(id) {
+        removeRepeatingRow('repeating_skills_' + id);
+      });
+
+      // Pass 3: Recalculate skill totals for surviving rows
+      var removeSet = new Set(toRemove);
+      ids.forEach(function(id) {
+        if (removeSet.has(id)) { return; }
+        var p     = 'repeating_skills_' + id + '_';
+        var base  = Object.prototype.hasOwnProperty.call(baseFixup, id)
+                      ? baseFixup[id]
+                      : (parseInt(v[p + 'skill_base'], 10) || 0);
+        var foci  = parseInt(v[p + 'skill_foci'], 10) || 0;
+        var misc  = parseInt(v[p + 'skill_misc'], 10) || 0;
+        out[p + 'skill_total'] = base + foci + misc;
+      });
+
+      setAttrs(out, {silent: true});
     });
   });
 
@@ -377,6 +543,26 @@ on('sheet:opened', function() {
         total += parseFloat(v['repeating_mutations_' + id + '_mutation_essence'] || 0);
       });
       setAttrs({ essence_spent: total });
+    });
+  });
+
+  // Recalculate companion reaction scores on sheet open
+  getSectionIDs('repeating_companions', function(ids) {
+    if (!ids.length) { return; }
+    var fields = [];
+    ids.forEach(function(id) {
+      var p = 'repeating_companions_' + id + '_';
+      fields.push(p + 'comp_i', p + 'comp_q');
+    });
+    getAttrs(fields, function(v) {
+      var out = {};
+      ids.forEach(function(id) {
+        var p = 'repeating_companions_' + id + '_';
+        out[p + 'comp_reaction'] = Math.floor(
+          ((parseInt(v[p + 'comp_i'], 10) || 0) + (parseInt(v[p + 'comp_q'], 10) || 0)) / 2
+        );
+      });
+      setAttrs(out);
     });
   });
 });
@@ -476,7 +662,7 @@ on('clicked:btn_sync_db', function() {
   // Repeating section field definitions
   var SECTIONS = {
     skills:       ['skill_name', 'skill_linked_attr', 'skill_general', 'skill_spec',
-                   'skill_base', 'skill_foci', 'skill_misc', 'skill_total'],
+                   'skill_base', 'skill_foci', 'skill_misc', 'skill_total', 'skill_parent_id', 'skill_child_id'],
     mutations:    ['mutation_name', 'mutation_level', 'mutation_essence',
                    'mutation_bp_cost', 'mutation_effect'],
     adept_powers: ['power_name', 'power_level', 'power_pp_cost',
@@ -487,11 +673,12 @@ on('clicked:btn_sync_db', function() {
                    'weapon_damage', 'weapon_conceal', 'weapon_reach', 'weapon_ep',
                    'weapon_range_short', 'weapon_range_medium',
                    'weapon_range_long', 'weapon_range_extreme'],
-    equipment:    ['equip_name', 'equip_description', 'equip_ep'],
+    equipment:    ['equip_name', 'equip_qty', 'equip_description', 'equip_ep'],
     contacts:     ['contact_name', 'contact_info', 'contact_level'],
     karma:        ['karma_event', 'karma_amount'],
     milestones:   ['milestone_trial', 'milestone_tier1', 'milestone_tier2',
-                   'milestone_tier3', 'milestone_current']
+                   'milestone_tier3', 'milestone_current'],
+    companions:   ['comp_name', 'comp_b', 'comp_q', 'comp_s', 'comp_c', 'comp_i', 'comp_w', 'comp_e', 'comp_r', 'comp_reaction', 'comp_cm_level']
   };
 
   // Scalar attributes for sync (excludes bio_q01-q20, includes money fields)
@@ -897,9 +1084,9 @@ on('clicked:btn_sync_db', function() {
     <div class="sheet-karma-row">
       <span class="sheet-karma-title">KARMA</span>
       <label>Good:</label>
-      <input type="number" name="attr_karma_good" value="0">
+      <input type="number" name="attr_karma_good" value="0" readonly class="sheet-karma-total">
       <label>Used:</label>
-      <input type="number" name="attr_karma_used" value="0">
+      <input type="number" name="attr_karma_used" value="0" readonly class="sheet-karma-total">
       <label>Total:</label>
       <input type="number" name="attr_karma_total" value="0" readonly class="sheet-karma-total">
       <label>Pool:</label>
@@ -944,6 +1131,8 @@ on('clicked:btn_sync_db', function() {
           <option value="Language">Language</option>
         </select>
         <input type="checkbox" name="attr_skill_spec" value="1" class="sheet-skill-spec">
+        <input type="hidden" name="attr_skill_parent_id" value="">
+        <input type="hidden" name="attr_skill_child_id" value="">
         <input type="number" name="attr_skill_base" value="0" class="sheet-skill-base">
         <input type="number" name="attr_skill_foci" value="0" class="sheet-skill-foci">
         <input type="number" name="attr_skill_misc" value="0" class="sheet-skill-misc">
@@ -971,6 +1160,7 @@ on('clicked:btn_sync_db', function() {
         <span class="sheet-hdr-mutation-essence">Essence</span>
         <span class="sheet-hdr-mutation-bp">BP</span>
         <span class="sheet-hdr-mutation-effect">Effect</span>
+        <span class="sheet-hdr-chat">&#x1F4AC;</span>
         <span class="sheet-hdr-spacer"></span>
       </div>
       <fieldset class="repeating_mutations">
@@ -978,7 +1168,8 @@ on('clicked:btn_sync_db', function() {
         <input type="number" name="attr_mutation_level" value="0" class="sheet-mutation-level">
         <input type="number" name="attr_mutation_essence" value="0" class="sheet-mutation-essence">
         <input type="number" name="attr_mutation_bp_cost" value="0" class="sheet-mutation-bp">
-        <input type="text" name="attr_mutation_effect" placeholder="Effect" class="sheet-mutation-effect">
+        <input type="text" name="attr_mutation_effect" placeholder="Effect" class="sheet-mutation-effect" title="View full effect text">
+        <button type="roll" class="sheet-btn-chat-effect" name="roll_btn_mutation_chat" value="&{template:desc} {{charname=@{char_name}}} {{rollname=@{mutation_name}}} {{desc=@{mutation_effect}}}">&#x1F4AC;</button>
       </fieldset>
     </div>
 
@@ -1000,6 +1191,7 @@ on('clicked:btn_sync_db', function() {
         <span class="sheet-hdr-power-level">Level</span>
         <span class="sheet-hdr-power-cost">PP Cost</span>
         <span class="sheet-hdr-power-effect">Effect</span>
+        <span class="sheet-hdr-chat">&#x1F4AC;</span>
         <span class="sheet-hdr-spacer"></span>
       </div>
       <fieldset class="repeating_adept_powers">
@@ -1007,7 +1199,8 @@ on('clicked:btn_sync_db', function() {
         <input type="number" name="attr_power_level" value="0" class="sheet-power-level">
         <input type="text" name="attr_power_pp_cost" placeholder="PP Cost" class="sheet-power-pp-cost">
         <input type="number" name="attr_power_pp_cost_value" value="0" class="sheet-hidden-numeric">
-        <input type="text" name="attr_power_effect" placeholder="Effect" class="sheet-power-effect">
+        <input type="text" name="attr_power_effect" placeholder="Effect" class="sheet-power-effect" title="View full effect text">
+        <button type="roll" class="sheet-btn-chat-effect" name="roll_btn_power_chat" value="&{template:desc} {{charname=@{char_name}}} {{rollname=@{power_name}}} {{desc=@{power_effect}}}">&#x1F4AC;</button>
       </fieldset>
     </div>
   </div>
@@ -1163,6 +1356,8 @@ on('clicked:btn_sync_db', function() {
           <label>Attack:</label>
           <input type="text" name="attr_spirit_attack" value="" readonly class="sheet-spirit-wide-display">
         </div>
+        <button type="roll" class="sheet-spirit-roll-btn" name="roll_btn_spirit_summon" value="&{template:skill} {{charname=@{char_name}}} {{rollname=Conjuring}} {{tn=[[{(@{spirit_force}+@{cm_tn_mod}),2}kh1[TN]]]}} {{successes=[[{?{Conjuring dice|1}d6!!}>[[{(@{spirit_force}+@{cm_tn_mod}),2}kh1]]]]}}">&#x1F52E; Summon</button>
+        <button type="roll" class="sheet-spirit-roll-btn" name="roll_btn_spirit_attack" value="&{template:attack} {{charname=@{char_name}}} {{rollname=Spirit Attack}} {{damage_code=@{spirit_attack}}} {{power=@{spirit_s}}} {{tn=[[?{Target Number|4}]]}} {{successes=[[{@{spirit_b}d6!!}>[[?{Target Number|4}]]]]}}">&#x2694; Attack</button>
       </div>
       <div class="sheet-spirit-info">
         <label>Powers:</label>
@@ -1270,14 +1465,32 @@ on('clicked:btn_sync_db', function() {
       </div>
       <fieldset class="repeating_weapons">
         <input type="text" class="sheet-weapon-name" name="attr_weapon_name" placeholder="Weapon Name">
-        <select class="sheet-weapon-type" name="attr_weapon_type">
-          <option value="Edged">Edged</option>
-          <option value="Club">Club</option>
-          <option value="Polearm">Polearm</option>
-          <option value="Unarmed">Unarmed</option>
-          <option value="Bow">Bow</option>
-          <option value="Crossbow">Crossbow</option>
-          <option value="Thrown">Thrown</option>
+        <select name="attr_weapon_type" class="sheet-weapon-type">
+          <optgroup label="Edged">
+            <option value="edged-throwing">Throwing</option>
+            <option value="edged-light">Light</option>
+            <option value="edged-single">Single-Handed</option>
+            <option value="edged-great">Great Sword</option>
+          </optgroup>
+          <optgroup label="Blunt">
+            <option value="blunt-throwing">Throwing</option>
+            <option value="blunt-light">Light</option>
+            <option value="blunt-single">Single-Handed</option>
+            <option value="blunt-great">Great Club</option>
+          </optgroup>
+          <optgroup label="Other Melee">
+            <option value="other-polearm">Polearm</option>
+            <option value="other-whip">Whip</option>
+            <option value="other-flail">Flail</option>
+            <option value="other-staff">Staff</option>
+            <option value="other-unarmed">Unarmed</option>
+          </optgroup>
+          <optgroup label="Ranged">
+            <option value="ranged-bow">Bow</option>
+            <option value="ranged-crossbow-hand">Crossbow (Hand)</option>
+            <option value="ranged-crossbow-medium">Crossbow (Medium)</option>
+            <option value="ranged-crossbow-heavy">Crossbow (Heavy)</option>
+          </optgroup>
         </select>
         <input type="text" class="sheet-weapon-modifiers" name="attr_weapon_modifiers" placeholder="Mods">
         <input type="number" class="sheet-weapon-power" name="attr_weapon_power" value="0">
@@ -1286,13 +1499,15 @@ on('clicked:btn_sync_db', function() {
         <input type="number" class="sheet-weapon-reach" name="attr_weapon_reach" value="0">
         <input type="number" class="sheet-weapon-ep" name="attr_weapon_ep" value="0">
         <div class="sheet-range-bands">
-          <input type="text" class="sheet-range-short" name="attr_weapon_range_short" placeholder="S">
-          <input type="text" class="sheet-range-medium" name="attr_weapon_range_medium" placeholder="M">
-          <input type="text" class="sheet-range-long" name="attr_weapon_range_long" placeholder="L">
+          <input type="text" class="sheet-range-short"   name="attr_weapon_range_short"   placeholder="S">
+          <input type="text" class="sheet-range-medium"  name="attr_weapon_range_medium"  placeholder="M">
+          <input type="text" class="sheet-range-long"    name="attr_weapon_range_long"    placeholder="L">
           <input type="text" class="sheet-range-extreme" name="attr_weapon_range_extreme" placeholder="X">
         </div>
-        <button type="roll" class="sheet-btn-attack" name="roll_btn_attack_ranged" value="&{template:attack} {{charname=@{char_name}}} {{rollname=Ranged: @{weapon_name}}} {{weapon_name=@{weapon_name}}} {{damage_code=@{weapon_damage}}} {{power=@{weapon_power}}} {{range_band=?{Range Band|Short}}} {{tn=[[?{Range TN|4}+@{cm_tn_mod}]]}} {{successes=[[{(?{Skill dice|0}+?{Combat Pool dice|0})d6!!}>[[?{Range TN|4}+@{cm_tn_mod}]]]]}}">Rng</button>
-        <button type="roll" class="sheet-btn-attack" name="roll_btn_attack_melee" value="&{template:attack} {{charname=@{char_name}}} {{rollname=Melee: @{weapon_name}}} {{weapon_name=@{weapon_name}}} {{damage_code=@{weapon_damage}}} {{power=@{weapon_power}}} {{reach=@{weapon_reach}}} {{tn=[[?{TN|4}+@{cm_tn_mod}]]}} {{successes=[[{(?{Skill dice|0}+?{Combat Pool dice|0})d6!!}>[[?{TN|4}+@{cm_tn_mod}]]]]}}">Mel</button>
+        <div class="sheet-weapon-roll-group">
+          <button type="roll" class="sheet-btn-attack" name="roll_btn_attack_ranged" value="&{template:attack} {{charname=@{char_name}}} {{rollname=Ranged: @{weapon_name}}} {{weapon_name=@{weapon_name}}} {{damage_code=@{weapon_damage}}} {{power=@{weapon_power}}} {{range_band=?{Range Band|Short}}} {{tn=[[?{Range TN|4}+@{cm_tn_mod}]]}} {{successes=[[{(?{Skill dice|0}+?{Combat Pool dice|0})d6!!}>[[?{Range TN|4}+@{cm_tn_mod}]]]]}}">Rng</button>
+          <button type="roll" class="sheet-btn-attack" name="roll_btn_attack_melee" value="&{template:attack} {{charname=@{char_name}}} {{rollname=Melee: @{weapon_name}}} {{weapon_name=@{weapon_name}}} {{damage_code=@{weapon_damage}}} {{power=@{weapon_power}}} {{reach=@{weapon_reach}}} {{tn=[[?{TN|4}+@{cm_tn_mod}]]}} {{successes=[[{(?{Skill dice|0}+?{Combat Pool dice|0})d6!!}>[[?{TN|4}+@{cm_tn_mod}]]]]}}">Mel</button>
+        </div>
       </fieldset>
     </div>
 
@@ -1301,12 +1516,14 @@ on('clicked:btn_sync_db', function() {
     <div class="sheet-section-equipment">
       <div class="sheet-equipment-header">
         <span class="sheet-hdr-equip-name">Name</span>
+        <span class="sheet-hdr-equip-qty">Qty</span>
         <span class="sheet-hdr-equip-desc">Description</span>
         <span class="sheet-hdr-equip-ep">EP</span>
         <span class="sheet-hdr-spacer"></span>
       </div>
       <fieldset class="repeating_equipment">
         <input type="text" class="sheet-equip-name" name="attr_equip_name" placeholder="Item Name">
+        <input type="number" class="sheet-equip-qty" name="attr_equip_qty" value="1" min="1">
         <input type="text" class="sheet-equip-desc" name="attr_equip_description" placeholder="Description">
         <input type="number" class="sheet-equip-ep" name="attr_equip_ep" value="0">
       </fieldset>
@@ -1353,7 +1570,7 @@ on('clicked:btn_sync_db', function() {
 
       <h3 class="sheet-section-title">Milestones</h3>
       <div class="sheet-milestones-header">
-        <span class="sheet-hdr-milestone-trial">Trial</span>
+        <span class="sheet-hdr-milestone-trial">Name</span>
         <span class="sheet-hdr-milestone-tier1">Tier 1</span>
         <span class="sheet-hdr-milestone-tier2">Tier 2</span>
         <span class="sheet-hdr-milestone-tier3">Tier 3</span>
@@ -1361,12 +1578,49 @@ on('clicked:btn_sync_db', function() {
         <span class="sheet-hdr-spacer"></span>
       </div>
       <fieldset class="repeating_milestones">
-        <input type="text" name="attr_milestone_trial" placeholder="Trial Name" class="sheet-milestone-trial">
+        <input type="text" name="attr_milestone_trial" placeholder="Milestone" class="sheet-milestone-trial">
         <input type="text" name="attr_milestone_tier1" placeholder="Tier 1" class="sheet-milestone-tier1">
         <input type="text" name="attr_milestone_tier2" placeholder="Tier 2" class="sheet-milestone-tier2">
         <input type="text" name="attr_milestone_tier3" placeholder="Tier 3" class="sheet-milestone-tier3">
         <input type="number" name="attr_milestone_current" value="0" min="0" max="3" class="sheet-milestone-current">
       </fieldset>
+
+    <!-- Region: Companions / Controlled Creatures -->
+    <h3 class="sheet-section-title">Companions &amp; Controlled Creatures</h3>
+    <div class="sheet-companions-header">
+      <span class="sheet-hdr-comp-name">Name</span>
+      <span class="sheet-hdr-comp-stat">B</span>
+      <span class="sheet-hdr-comp-stat">Q</span>
+      <span class="sheet-hdr-comp-stat">S</span>
+      <span class="sheet-hdr-comp-stat">C</span>
+      <span class="sheet-hdr-comp-stat">I</span>
+      <span class="sheet-hdr-comp-stat">W</span>
+      <span class="sheet-hdr-comp-stat">E</span>
+      <span class="sheet-hdr-comp-stat">R</span>
+      <span class="sheet-hdr-comp-reaction">Rcn</span>
+      <span class="sheet-hdr-comp-cm">CM</span>
+      <span class="sheet-hdr-comp-atk">Atk</span>
+      <span class="sheet-hdr-spacer"></span>
+    </div>
+    <fieldset class="repeating_companions">
+      <input type="text"   class="sheet-comp-name"     name="attr_comp_name"     placeholder="Name">
+      <input type="number" class="sheet-comp-stat"     name="attr_comp_b"        value="0" min="0">
+      <input type="number" class="sheet-comp-stat"     name="attr_comp_q"        value="0" min="0">
+      <input type="number" class="sheet-comp-stat"     name="attr_comp_s"        value="0" min="0">
+      <input type="number" class="sheet-comp-stat"     name="attr_comp_c"        value="0" min="0">
+      <input type="number" class="sheet-comp-stat"     name="attr_comp_i"        value="0" min="0">
+      <input type="number" class="sheet-comp-stat"     name="attr_comp_w"        value="0" min="0">
+      <input type="number" class="sheet-comp-stat"     name="attr_comp_e"        value="0" min="0">
+      <input type="number" class="sheet-comp-stat"     name="attr_comp_r"        value="0" min="0">
+      <input type="number" class="sheet-comp-reaction" name="attr_comp_reaction" value="0" readonly>
+      <select class="sheet-comp-cm-level" name="attr_comp_cm_level">
+        <option value="0">None</option>
+        <option value="1">Light</option>
+        <option value="2">Moderate</option>
+        <option value="3">Serious</option>
+      </select>
+      <button type="roll" class="sheet-comp-attack" name="roll_btn_comp_attack" value="&{template:attack} {{charname=@{comp_name}}} {{rollname=Creature Attack}} {{damage_code=M}} {{power=@{comp_s}}} {{tn=[[?{Target Number|4}+@{comp_cm_level}]]}} {{successes=[[{@{comp_reaction}d6!!}>[[?{Target Number|4}+@{comp_cm_level}]]]]}}">&#x1F43E;</button>
+    </fieldset>
     </div>
   </div>
 </div>
@@ -1492,5 +1746,19 @@ on('clicked:btn_sync_db', function() {
       </div>
       {{/successes}}
     </div>
+  </div>
+</rolltemplate>
+
+<rolltemplate class="sheet-rolltemplate-desc">
+  <div class="sheet-template-container sheet-template-desc-container">
+    <div class="sheet-template-header">
+      {{#charname}}<span class="sheet-template-charname">{{charname}}</span>{{/charname}}
+      {{#rollname}}<span class="sheet-template-rollname">{{rollname}}</span>{{/rollname}}
+    </div>
+    {{#desc}}
+    <div class="sheet-template-row">
+      <span class="sheet-template-desc">{{desc}}</span>
+    </div>
+    {{/desc}}
   </div>
 </rolltemplate>
